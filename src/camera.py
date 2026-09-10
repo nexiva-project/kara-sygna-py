@@ -1,6 +1,5 @@
 import cv2
 
-
 def main():
     # 0 = webcam padrão do computador.
     # Se você tiver mais de uma câmera, pode testar 1, 2, etc.
