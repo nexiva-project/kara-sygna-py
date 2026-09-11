@@ -87,3 +87,29 @@ def extrair_landmarks_normalizados(landmarks_da_mao):
         coordenadas.extend([x_relativo, y_relativo, z_relativo])
 
     return coordenadas
+
+
+def eh_vetor_zerado(vetor):
+    """Retorna True se o vetor for todo (ou quase todo) zero — ou seja,
+    representa uma mão que não foi detectada naquele frame."""
+    return all(abs(valor) < 1e-9 for valor in vetor)
+
+
+def espelhar_mao(vetor_de_uma_mao):
+    """
+    Recebe os 63 números normalizados de UMA mão e devolve a versão
+    "espelhada", como se o mesmo sinal tivesse sido feito com a outra
+    mão. Como as coordenadas já são relativas ao pulso, espelhar é
+    simplesmente inverter o sinal da coordenada X de cada ponto (o
+    eixo horizontal) e manter Y e Z como estão.
+
+    Isso é útil porque a maioria dos sinais de uma mão só têm o mesmo
+    "significado" não importa qual mão os faz — mas, para o
+    classificador, mão esquerda e mão direita ocupam posições
+    diferentes no vetor de entrada. Espelhar os dados na coleta ensina
+    o modelo que a forma vale para as duas mãos.
+    """
+    espelhado = list(vetor_de_uma_mao)
+    for i in range(0, len(espelhado), 3):  # cada ponto tem 3 valores: x, y, z
+        espelhado[i] = -espelhado[i]
+    return espelhado
