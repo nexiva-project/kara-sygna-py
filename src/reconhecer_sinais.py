@@ -94,7 +94,7 @@ def main():
             frame, texto, (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX, 0.8, cor, 2,
         )
-        cv2.imshow("kara-sygna-py - Passo 8: Reconhecimento em Tempo Real", frame)
+        cv2.imshow("kara-sygna-py - Passo 7: Reconhecimento em Tempo Real", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

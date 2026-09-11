@@ -1,6 +1,5 @@
 """
-kara-sygna-py — Passo 5 (v1): fix ‘bug’.
-kara-sygna-py — Passo 5 (v2): coletar dados para sinais mais específicos.
+kara-sygna-py — Passo 6 (v2): coletar dados para sinais mais específicos.
 
 Diferença da v1:
     Agora usamos `extrair_landmarks_normalizados` (de src/utils.py) em
@@ -21,7 +20,12 @@ import os
 import cv2
 import mediapipe as mp
 
-from utils import montar_vetor_duas_maos, FEATURES_POR_MAO
+from utils import (
+    montar_vetor_duas_maos,
+    FEATURES_POR_MAO,
+    eh_vetor_zerado,
+    espelhar_mao,
+)
 
 ARQUIVO_CSV = "dados_sinais.csv"
 AMOSTRAS_POR_RODADA = 60
@@ -101,10 +105,28 @@ def main():
             # Um vetor por FRAME (não por mão!), já com as duas mãos
             # combinadas — isso corrige o bug do contador ficar negativo.
             vetor = montar_vetor_duas_maos(resultado)
+            vetor_esquerda = vetor[:FEATURES_POR_MAO]
+            vetor_direita = vetor[FEATURES_POR_MAO:]
+
+            linhas_para_salvar = [[rotulo_atual] + vetor]
+
+            # Se o sinal foi feito com UMA mão só, geramos também a
+            # versão espelhada (mesma forma, mão oposta). Assim o
+            # modelo aprende que o sinal vale para as duas mãos, sem
+            # você precisar gravar cada sinal duas vezes.
+            so_esquerda = not eh_vetor_zerado(vetor_esquerda) and eh_vetor_zerado(vetor_direita)
+            so_direita = not eh_vetor_zerado(vetor_direita) and eh_vetor_zerado(vetor_esquerda)
+
+            if so_esquerda:
+                vetor_espelhado = [0.0] * FEATURES_POR_MAO + espelhar_mao(vetor_esquerda)
+                linhas_para_salvar.append([rotulo_atual] + vetor_espelhado)
+            elif so_direita:
+                vetor_espelhado = espelhar_mao(vetor_direita) + [0.0] * FEATURES_POR_MAO
+                linhas_para_salvar.append([rotulo_atual] + vetor_espelhado)
 
             with open(ARQUIVO_CSV, "a", newline="", encoding="utf-8") as arquivo:
                 escritor = csv.writer(arquivo)
-                escritor.writerow([rotulo_atual] + vetor)
+                escritor.writerows(linhas_para_salvar)
 
             amostras_restantes -= 1
 
