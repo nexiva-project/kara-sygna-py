@@ -4,15 +4,14 @@
 
 Projeto de reconhecimento de sinais de mão via câmera, usando Python.
 
-Roteiro de aprendizado (8 passos):
-1. **Preparar o ambiente Python** ✅ (feito abaixo)
-2. **Instalar OpenCV e capturar vídeo** ✅ (este passo — `src/camera.py`)
-3. **Detectar a mão com MediaPipe** ✅ (este passo — `src/hand_tracker.py`)
-4. **Extrair e organizar os landmarks** ✅ (este passo — `src/landmarks.py`)
-5. **Reconhecer gestos simples** ✅ (este passo — `src/contar_dedos.py`)
-6. **Coletar dados para sinais mais específicos** ✅ (este passo — `src/coletar_dados.py`)
-7. **Treinar um classificador simples** ✅ (este passo — `src/treinar_modelo.py`)
-8. **Rodar em tempo real e organizar o projeto** ✅ (este passo — `src/reconhecer_sinais.py`)
+1. **Preparar o ambiente Python** (`Versão: 3.12.10`)
+2. **Instalar OpenCV e capturar vídeo** (`src/camera.py`)
+3. **Detectar a mão com MediaPipe** (`src/hand_tracker.py`)
+4. **Extrair e organizar os landmarks** (`src/landmarks.py`)
+5. **Reconhecer gestos simples** (`src/contar_dedos.py`)
+6. **Coletar dados para sinais mais específicos** (`src/coletar_dados.py`)
+7. **Treinar um classificador simples** (`src/treinar_modelo.py`)
+8. **Rodar em tempo real e organizar o projeto** (`src/reconhecer_sinais.py`)
 
 ## Como configurar o ambiente (rodar na SUA máquina)
 
@@ -23,13 +22,7 @@ cd kara-sygna-py
 # 2. Crie um ambiente virtual
 python -m venv venv
 
-# 3. Ative o ambiente virtual
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# 4. Instale as dependências
+# 3. Instale as dependências
 pip install -r requirements.txt
 ```
 
@@ -87,7 +80,7 @@ Dica: grave cada sinal em algumas rodadas diferentes (mudando um
 pouco o ângulo e a posição da mão), para o classificador do próximo
 passo aprender melhor.
 
-**Atualização importante**: este script agora usa `src/utils.py` para
+**Importante**: este script usa `src/utils.py` para
 normalizar os landmarks (posição relativa ao pulso + escala pelo
 tamanho da mão), em vez de coordenadas absolutas. Isso faz o
 reconhecimento funcionar mesmo quando a mão muda de lugar ou de
@@ -122,8 +115,7 @@ cinco) para a câmera. A tela deve mostrar o nome do sinal reconhecido
 e a confiança do modelo (ex: `Sinal: tres (98%)`). Se a confiança for
 baixa, aparece "Incerto" em vez de arriscar um palpite errado.
 
-Parabéns — com isso o projeto completa o ciclo: câmera → detecção da
-mão → landmarks → classificador → reconhecimento ao vivo! 🎉
+`câmera → detecção da mão → landmarks → classificador → reconhecimento ao vivo`
 
 Próximos passos possíveis, se quiser continuar evoluindo:
 - Coletar mais amostras por sinal (o modelo aprende melhor com
@@ -136,6 +128,7 @@ Próximos passos possíveis, se quiser continuar evoluindo:
 - Escrever testes automatizados para a lógica de extração de
   landmarks e de contagem de dedos (por exemplo, com `pytest`),
   usando landmarks fixos como dados de teste.
+- Reconhecimento de sinais manuais utilizando IA para tradução em texto
 
 ### Problemas comuns
 - **`AttributeError: module 'mediapipe' has no attribute 'solutions'`**: a partir da versão 0.10.31, o Google removeu a API antiga (`mediapipe.solutions`) do pacote. Use a versão fixada no `requirements.txt` (0.10.21), que ainda tem essa API. Se já instalou a versão errada, rode: `pip install mediapipe==0.10.21`
