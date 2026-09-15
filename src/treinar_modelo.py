@@ -55,3 +55,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    print("\nTreinando o classificador (Random Forest)...")
