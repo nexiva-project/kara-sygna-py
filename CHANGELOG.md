@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.0] - 2026-09-18
+
+### Adicionado
+- Painel de controle único para a aplicação.
+- Modo "Ensinar" para coletar novos sinais diretamente pelo painel.
+- Treinamento da IA diretamente pelo painel.
+- Modo "Reconhecimento" para identificar sinais em tempo real.
+- Lista de sinais aprendidos.
+- Controle para iniciar e interromper o ensino e o reconhecimento.
+
+### Refatorado
+- Centralização do fluxo da aplicação no `app.py`.
+- Integração entre coleta de dados, treinamento e reconhecimento.
+- Atualização da câmera pelo loop do Tkinter, sem utilização de threads.
+- Remove o módulo `pipeline.py`
+
+### Interface
+- Adicionados controles para:
+  - Começar a ensinar.
+  - Parar.
+  - Treinar IA.
+  - Iniciar reconhecimento.
+
 ## [0.3.0] - 2026-09-18
 
 ### Adicionado

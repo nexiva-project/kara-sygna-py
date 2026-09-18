@@ -3,3 +3,6 @@
 # arquivos de CSV e PKL
 **/dados_sinais.csv
 **/modelo_sinais.pkl
+
+# cache
+**/__pycache__/

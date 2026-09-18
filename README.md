@@ -20,6 +20,7 @@ O objetivo do projeto é explorar tecnologias de **visão computacional, Machine
 * [Pandas](https://pandas.pydata.org/docs/user_guide/index.html#user-guide)
 * [Joblib](https://joblib.readthedocs.io/en/stable/)
 * Random Forest
+---
 
 ## Configuração do Ambiente
 
@@ -60,6 +61,8 @@ pip install -r requirements.txt
 
 O projeto foi desenvolvido em etapas para facilitar o estudo e a evolução do reconhecimento de sinais.
 
+![handimg](documento/mao.png)
+
 ### Fluxo de visão computacional
 
 Testar a câmera, detectar a mão e identificar os landmarks:
@@ -90,14 +93,13 @@ Coletar os dados, aumentar as amostras, treinar o modelo e realizar o reconhecim
 
 ### Painel de controle (tkinter)
 
-O projeto também possui um **painel de controle único** para executar o fluxo da IA de forma centralizada.
+O projeto também possui um **painel de controle** para executar o fluxo da IA de forma centralizada.
 
 ```text
 app.py
   ↓
-Painel de Controle
+Painel de Controle - Kara SGYNA IA - Treinamento e Camera
   ├── Coletar dados
-  ├── Aumentar dados
   ├── Treinar modelo
   └── Reconhecer sinais
 ```
