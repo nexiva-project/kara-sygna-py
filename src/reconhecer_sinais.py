@@ -19,6 +19,7 @@ import cv2
 import joblib
 import mediapipe as mp
 import pandas as pd
+from collections import deque, Counter
 
 from utils import montar_vetor_duas_maos
 
@@ -27,6 +28,15 @@ ARQUIVO_MODELO = "modelo_sinais.pkl"
 # Só mostramos o sinal na tela quando o modelo está bem confiante,
 # para evitar "piscar" um sinal errado por um instante.
 CONFIANCA_MINIMA = 0.7
+
+# --- Suavização temporal ---
+# Em vez de confiar 100% na previsão de um único frame (que pode ser
+# afetado por ruído momentâneo da câmera ou um ângulo levemente
+# diferente da mão), guardamos as últimas N previsões e mostramos a
+# que apareceu com mais frequência entre elas. Isso reduz bastante a
+# confusão entre sinais parecidos, como "3" e "4".
+TAMANHO_JANELA = 10  # quantos frames recentes considerar
+MINIMO_DE_VOTOS = 6  # de quantos desses frames precisam concordar
 
 
 def main():
@@ -46,6 +56,9 @@ def main():
     if not captura.isOpened():
         print("Não foi possível acessar a câmera.")
         return
+
+    # Guarda as últimas previsões (só as que passaram do CONFIANCA_MINIMA).
+    historico_previsoes = deque(maxlen=TAMANHO_JANELA)
 
     print("Câmera aberta! Mostre um sinal treinado. Pressione 'q' para sair.")
 
@@ -84,17 +97,37 @@ def main():
             confianca = probabilidades[indice_melhor]
 
             if confianca >= CONFIANCA_MINIMA:
-                texto = f"Sinal: {sinal_previsto} ({confianca:.0%})"
+                historico_previsoes.append(sinal_previsto)
+            else:
+                # Uma previsão de baixa confiança não "vota" em nada,
+                # mas também não é adicionada como ruído no histórico.
+                historico_previsoes.append(None)
+
+            # Conta qual sinal apareceu mais vezes na janela recente
+            # (ignorando os None, que representam frames incertos).
+            votos = Counter(v for v in historico_previsoes if v is not None)
+
+            if votos:
+                sinal_mais_votado, quantidade_votos = votos.most_common(1)[0]
+            else:
+                sinal_mais_votado, quantidade_votos = None, 0
+
+            if sinal_mais_votado is not None and quantidade_votos >= MINIMO_DE_VOTOS:
+                texto = f"Sinal: {sinal_mais_votado} ({quantidade_votos}/{TAMANHO_JANELA})"
                 cor = (0, 255, 0)
             else:
-                texto = f"Incerto ({confianca:.0%})"
+                texto = f"Incerto (frame atual: {sinal_previsto}, {confianca:.0%})"
                 cor = (0, 165, 255)
+        else:
+            # Sem mão no frame: limpamos o histórico para não "carregar"
+            # uma previsão antiga quando a mão voltar a aparecer.
+            historico_previsoes.clear()
 
         cv2.putText(
             frame, texto, (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX, 0.8, cor, 2,
         )
-        cv2.imshow("kara-sygna-py - Passo 7: Reconhecimento em Tempo Real", frame)
+        cv2.imshow("kara-sygna-py - Passo 8: Reconhecimento em Tempo Real", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break

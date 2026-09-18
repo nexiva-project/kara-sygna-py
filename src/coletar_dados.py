@@ -28,7 +28,7 @@ from utils import (
 )
 
 ARQUIVO_CSV = "dados_sinais.csv"
-AMOSTRAS_POR_RODADA = 60
+AMOSTRAS_POR_RODADA = 120
 
 
 def garantir_cabecalho_csv(caminho):
