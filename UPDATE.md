@@ -4,7 +4,7 @@
  | |  | | |__) | |  | | /  \  | |  | |__   
  | |  | |  ___/| |  | |/ /\ \ | |  |  __|  
  | |__| | |    | |__| / ____ \| |  | |____ 
-  \____/|_|    |_____/_/    \_\_|  |______|                                                                                   
+  \____/|_|    |_____/_/    \_\_|  |______|                                                                               
 ```
                                           
 ---
@@ -17,6 +17,18 @@ o formato do CSV — **apague o `dados_sinais.csv` e o
 `modelo_sinais.pkl` antigos e colete TODOS os sinais de novo**
 (inclusive os de uma mão só, como os números), já que todas as linhas
 precisam ter a mesma quantidade de colunas.
+
+**Atualização (suavização temporal)**: para reduzir confusão entre
+sinais parecidos (ex: "3" e "4"), o reconhecimento agora olha os
+últimos 10 frames e só mostra um sinal quando pelo menos 6 deles
+concordam. Isso estabiliza a previsão e evita "piscar" entre sinais
+por causa de ruído momentâneo da câmera. Se quiser ajustar a
+sensibilidade, mexa em `TAMANHO_JANELA` e `MINIMO_DE_VOTOS` no início
+do `reconhecer_sinais.py`.
+ 
+Se mesmo assim sinais parecidos continuarem se confundindo, o próximo
+passo é coletar mais amostras desses sinais especificamente, variando
+mais o ângulo e a distância da mão durante a gravação.
  
 ### Problemas comuns
  
