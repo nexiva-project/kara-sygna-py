@@ -12,11 +12,11 @@ Como rodar:
     python src/treinar_modelo.py
 """
 
-import pandas as pd
 import joblib
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
 
 ARQUIVO_CSV = "dados_sinais.csv"
 ARQUIVO_MODELO = "modelo_sinais.pkl"
