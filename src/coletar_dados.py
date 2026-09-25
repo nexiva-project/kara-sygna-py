@@ -21,10 +21,10 @@ import cv2
 import mediapipe as mp
 
 from utils import (
-    montar_vetor_duas_maos,
     FEATURES_POR_MAO,
     eh_vetor_zerado,
     espelhar_mao,
+    montar_vetor_duas_maos,
 )
 
 ARQUIVO_CSV = "dados_sinais.csv"

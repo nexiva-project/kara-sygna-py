@@ -30,7 +30,7 @@ def main():
 
     with open(ARQUIVO_CSV, "r", newline="", encoding="utf-8") as arquivo:
         leitor = csv.reader(arquivo)
-        cabecalho = next(leitor)
+        next(leitor)
         linhas_originais = list(leitor)
 
     novas_linhas = []

@@ -30,17 +30,17 @@ Como rodar:
 
 import csv
 import os
+import tkinter as tk
 from collections import Counter, deque
+from tkinter import messagebox
 
 import cv2
 import joblib
 import mediapipe as mp
 import pandas as pd
-import tkinter as tk
-from tkinter import messagebox
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 from utils import (
     FEATURES_POR_MAO,
@@ -171,7 +171,7 @@ class KaraSygnaApp:
             if os.path.exists(ARQUIVO_MODELO):
                 try:
                     sinais_no_modelo = set(joblib.load(ARQUIVO_MODELO).classes_)
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
             contagem = dados["rotulo"].value_counts().sort_index()
             for palavra, quantidade in contagem.items():
@@ -179,7 +179,7 @@ class KaraSygnaApp:
                 self.lista_sinais.insert(
                     tk.END, f"{palavra} — {quantidade} exemplos — {estado}"
                 )
-        except Exception as erro:
+        except Exception as erro: # noqa: BLE001
             self.lista_sinais.insert(tk.END, f"Não foi possível ler os sinais: {erro}")
 
     # ------------------------------------------------------------------
@@ -242,7 +242,7 @@ class KaraSygnaApp:
             texto_acuracia = f" (acurácia estimada: {acuracia:.0%})" if acuracia is not None else ""
             self.status.set(f"IA treinada com {len(dados)} exemplos e {y.nunique()} sinais{texto_acuracia}.")
             messagebox.showinfo("IA treinada", "Pronto! Agora use INICIAR RECONHECIMENTO.")
-        except Exception as erro:
+        except Exception as erro: # noqa: BLE001
             messagebox.showerror("Não foi possível treinar", str(erro))
 
     def iniciar_reconhecimento(self):
@@ -251,7 +251,7 @@ class KaraSygnaApp:
         except FileNotFoundError:
             messagebox.showwarning("Modelo não encontrado", "Ensine sinais e clique em TREINAR IA primeiro.")
             return
-        except Exception as erro:
+        except Exception as erro: # noqa: BLE001
             messagebox.showerror("Modelo inválido", str(erro))
             return
         self.historico_previsoes.clear()

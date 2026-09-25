@@ -15,11 +15,12 @@ Como rodar:
     python src/reconhecer_sinais.py
 """
 
+from collections import Counter, deque
+
 import cv2
 import joblib
 import mediapipe as mp
 import pandas as pd
-from collections import deque, Counter
 
 from utils import montar_vetor_duas_maos
 

@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 
+
 def main():
     # --- Configuração do MediaPipe ---
     mp_hands = mp.solutions.hands
