@@ -6,3 +6,8 @@
 
 # cache
 **/__pycache__/
+
+# build e dist
+build
+dist
+KaraSygna.spec
