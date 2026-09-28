@@ -1838,6 +1838,197 @@ class KaraSygnaApp:
             text="",
         )
 
+
+    # ========================================================
+    # CORREÇÃO AUTOMÁTICA DE ROTAÇÃO PARA RECONHECIMENTO
+    # ========================================================
+
+    @staticmethod
+    def _matriz_rotacao_3d(rx_graus, ry_graus, rz_graus):
+        """Cria uma matriz de rotação 3D."""
+        rx = np.radians(rx_graus)
+        ry = np.radians(ry_graus)
+        rz = np.radians(rz_graus)
+
+        cx, sx = np.cos(rx), np.sin(rx)
+        cy, sy = np.cos(ry), np.sin(ry)
+        cz, sz = np.cos(rz), np.sin(rz)
+
+        matriz_x = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, cx, -sx],
+                [0.0, sx, cx],
+            ],
+            dtype=np.float32,
+        )
+
+        matriz_y = np.array(
+            [
+                [cy, 0.0, sy],
+                [0.0, 1.0, 0.0],
+                [-sy, 0.0, cy],
+            ],
+            dtype=np.float32,
+        )
+
+        matriz_z = np.array(
+            [
+                [cz, -sz, 0.0],
+                [sz, cz, 0.0],
+                [0.0, 0.0, 1.0],
+            ],
+            dtype=np.float32,
+        )
+
+        return matriz_z @ matriz_y @ matriz_x
+
+    @classmethod
+    def _rotacionar_vetor_mao(cls, vetor, rx, ry, rz):
+        """
+        Gira os 21 landmarks de uma mão em torno do pulso.
+
+        O utils.py já coloca o pulso na origem, então basta
+        aplicar a rotação diretamente em cada ponto.
+        """
+        if eh_vetor_zerado(vetor):
+            return list(vetor)
+
+        matriz = cls._matriz_rotacao_3d(rx, ry, rz)
+        pontos = np.asarray(vetor, dtype=np.float32).reshape(
+            FEATURES_POR_MAO // 3,
+            3,
+        )
+
+        pontos_rotacionados = pontos @ matriz.T
+
+        return pontos_rotacionados.reshape(-1).tolist()
+
+    @classmethod
+    def _vetor_com_rotacao(cls, vetor, rx, ry, rz):
+        """Aplica a mesma correção de orientação às duas mãos."""
+        esquerda = vetor[:FEATURES_POR_MAO]
+        direita = vetor[FEATURES_POR_MAO:]
+
+        return (
+            cls._rotacionar_vetor_mao(
+                esquerda,
+                rx,
+                ry,
+                rz,
+            )
+            + cls._rotacionar_vetor_mao(
+                direita,
+                rx,
+                ry,
+                rz,
+            )
+        )
+
+    def prever_com_correcao_rotacao(self, vetor):
+        """
+        Testa várias orientações do mesmo sinal sem treinar novamente.
+
+        Para cada rotação, o vetor atual é corrigido e enviado ao modelo
+        existente. A orientação que produzir a maior probabilidade é usada.
+
+        Isso permite, por exemplo, tentar desfazer uma rotação física da
+        mão antes de perguntar ao Random Forest qual é o sinal.
+        """
+        if self.modelo is None:
+            raise RuntimeError("Modelo não carregado.")
+
+        # (X, Y, Z), em graus.
+        # A primeira opção é SEM alteração.
+        # As demais tentam desfazer diferentes inclinações/giradas.
+        rotacoes = [
+            (0, 0, 0),
+
+            # Inclinação para frente/trás.
+            (15, 0, 0),
+            (-15, 0, 0),
+            (30, 0, 0),
+            (-30, 0, 0),
+            (45, 0, 0),
+            (-45, 0, 0),
+
+            # Inclinação para os lados.
+            (0, 15, 0),
+            (0, -15, 0),
+            (0, 30, 0),
+            (0, -30, 0),
+            (0, 45, 0),
+            (0, -45, 0),
+
+            # Giro no próprio eixo da mão.
+            (0, 0, 15),
+            (0, 0, -15),
+            (0, 0, 30),
+            (0, 0, -30),
+            (0, 0, 45),
+            (0, 0, -45),
+
+            # Combinações para uma mão inclinada e girada ao mesmo tempo.
+            (20, 20, 0),
+            (20, -20, 0),
+            (-20, 20, 0),
+            (-20, -20, 0),
+
+            (20, 0, 20),
+            (20, 0, -20),
+            (-20, 0, 20),
+            (-20, 0, -20),
+
+            (0, 20, 20),
+            (0, 20, -20),
+            (0, -20, 20),
+            (0, -20, -20),
+        ]
+
+        vetores = [
+            self._vetor_com_rotacao(
+                vetor,
+                rx,
+                ry,
+                rz,
+            )
+            for rx, ry, rz in rotacoes
+        ]
+
+        entradas = pd.DataFrame(
+            vetores,
+            columns=self.modelo.feature_names_in_,
+        )
+
+        probabilidades = self.modelo.predict_proba(
+            entradas
+        )
+
+        # Para cada orientação, pega a classe mais provável.
+        melhores_indices = probabilidades.argmax(axis=1)
+        melhores_confiancas = probabilidades[
+            np.arange(len(probabilidades)),
+            melhores_indices,
+        ]
+
+        # Depois compara as melhores orientações entre si.
+        indice_rotacao = int(
+            melhores_confiancas.argmax()
+        )
+
+        indice_classe = int(
+            melhores_indices[indice_rotacao]
+        )
+
+        sinal = self.modelo.classes_[indice_classe]
+        confianca = float(
+            melhores_confiancas[indice_rotacao]
+        )
+
+        rotacao = rotacoes[indice_rotacao]
+
+        return sinal, confianca, rotacao
+
     # ========================================================
     # LOOP DA CÂMERA
     # ========================================================
@@ -1951,34 +2142,12 @@ class KaraSygnaApp:
 
                 try:
 
-                    entrada = pd.DataFrame(
-                        [vetor],
-                        columns=(
-                            self.modelo
-                            .feature_names_in_
-                        ),
-                    )
-
-                    probabilidades = (
-                        self.modelo
-                        .predict_proba(
-                            entrada
-                        )[0]
-                    )
-
-                    indice = (
-                        probabilidades.argmax()
-                    )
-
-                    sinal = (
-                        self.modelo
-                        .classes_[indice]
-                    )
-
-                    confianca = (
-                        probabilidades[
-                            indice
-                        ]
+                    (
+                        sinal,
+                        confianca,
+                        rotacao_aplicada,
+                    ) = self.prever_com_correcao_rotacao(
+                        vetor,
                     )
 
                     if (
@@ -1986,11 +2155,23 @@ class KaraSygnaApp:
                         >= CONFIANCA_MINIMA
                     ):
 
+                        rx, ry, rz = rotacao_aplicada
+
                         texto_camera = (
                             f"SINAL: "
                             f"{sinal} "
                             f"({confianca:.0%})"
                         )
+
+                        if (
+                            rx != 0
+                            or ry != 0
+                            or rz != 0
+                        ):
+                            texto_camera += (
+                                f"  [ajuste "
+                                f"{rx:+d},{ry:+d},{rz:+d}°]"
+                            )
 
                         cor_camera = (
                             0,

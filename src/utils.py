@@ -1,53 +1,109 @@
-"""
-kara-sygna-py — utilitário compartilhado: normalização de landmarks.
-
-Por que normalizar?
-    As coordenadas (x, y, z) que o MediaPipe devolve são relativas ao
-    tamanho da IMAGEM inteira. Isso significa que o mesmo sinal feito
-    em lugares diferentes da tela, ou a distâncias diferentes da
-    câmera, gera números bem diferentes — e o classificador acaba
-    aprendendo "onde a mão está" em vez de "qual é o formato do sinal".
-
-Como resolvemos isso:
-    1. Posição: subtraímos a posição do PULSO (landmark 0) de todos
-       os pontos. Depois disso, o pulso vira a origem (0, 0, 0), e
-       cada ponto representa sua posição RELATIVA ao pulso.
-    2. Escala: dividimos todos os pontos pela distância entre o pulso
-       e a base do dedo médio (landmark 9). Isso faz com que uma mão
-       grande (perto da câmera) e uma mão pequena (longe da câmera)
-       produzam números na mesma faixa, desde que o sinal seja igual.
-
-Use SEMPRE esta mesma função em todos os scripts (coleta de dados e
-reconhecimento em tempo real), para garantir que os dados de treino e
-os dados usados na hora de prever estejam no mesmo formato.
-"""
+"""kara-sygna-py — utilitário compartilhado: normalização de landmarks."""
 
 NUM_LANDMARKS = 21
 FEATURES_POR_MAO = NUM_LANDMARKS * 3  # 63
+
 PULSO = 0
 BASE_DEDO_MEDIO = 9
 
 
+def extrair_landmarks_normalizados(landmarks_da_mao):
+    """
+    Normaliza os landmarks de uma mão.
+
+    A posição da mão na câmera é removida usando o pulso como origem.
+    A escala é normalizada usando a distância entre o pulso e a base
+    do dedo médio.
+
+    Retorna:
+        63 valores = 21 landmarks × (x, y, z)
+    """
+
+    pontos = landmarks_da_mao.landmark
+
+    # ---------------------------------------------------------
+    # 1. Pulso como origem
+    # ---------------------------------------------------------
+
+    origem_x = pontos[PULSO].x
+    origem_y = pontos[PULSO].y
+    origem_z = pontos[PULSO].z
+
+    # ---------------------------------------------------------
+    # 2. Tamanho da mão
+    # ---------------------------------------------------------
+
+    dx = pontos[BASE_DEDO_MEDIO].x - origem_x
+    dy = pontos[BASE_DEDO_MEDIO].y - origem_y
+    dz = pontos[BASE_DEDO_MEDIO].z - origem_z
+
+    escala = (
+        dx ** 2
+        + dy ** 2
+        + dz ** 2
+    ) ** 0.5
+
+    if escala < 1e-6:
+        escala = 1e-6
+
+    # ---------------------------------------------------------
+    # 3. Coordenadas relativas ao pulso
+    # ---------------------------------------------------------
+
+    coordenadas = []
+
+    for ponto in pontos:
+
+        x_relativo = (
+            ponto.x - origem_x
+        ) / escala
+
+        y_relativo = (
+            ponto.y - origem_y
+        ) / escala
+
+        z_relativo = (
+            ponto.z - origem_z
+        ) / escala
+
+        coordenadas.extend([
+            x_relativo,
+            y_relativo,
+            z_relativo,
+        ])
+
+    return coordenadas
+
+
 def montar_vetor_duas_maos(resultado):
     """
-    Recebe o 'resultado' bruto do MediaPipe (com multi_hand_landmarks
-    e multi_handedness) e retorna um vetor de tamanho FIXO com
-    2 * FEATURES_POR_MAO = 126 números: primeiro os 63 da mão
-    ESQUERDA, depois os 63 da mão DIREITA.
+    Retorna um vetor fixo de 126 valores:
 
-    Se alguma das mãos não for detectada naquele frame, a parte dela
-    no vetor é preenchida com zeros. Isso garante que toda amostra
-    tenha sempre o mesmo tamanho, não importa quantas mãos apareceram
-    -- essencial para treinar e usar o classificador depois.
+        63 valores = mão esquerda
+        63 valores = mão direita
+
+    Se uma mão não for detectada, seus valores ficam zerados.
     """
+
     vetor_esquerda = [0.0] * FEATURES_POR_MAO
     vetor_direita = [0.0] * FEATURES_POR_MAO
 
-    if resultado.multi_hand_landmarks and resultado.multi_handedness:
-        zipped = zip(resultado.multi_hand_landmarks, resultado.multi_handedness)
+    if (
+        resultado.multi_hand_landmarks
+        and resultado.multi_handedness
+    ):
+        zipped = zip(
+            resultado.multi_hand_landmarks,
+            resultado.multi_handedness,
+        )
+
         for landmarks_da_mao, info_da_mao in zipped:
-            rotulo = info_da_mao.classification[0].label  # "Left" ou "Right"
-            coordenadas = extrair_landmarks_normalizados(landmarks_da_mao)
+
+            rotulo = info_da_mao.classification[0].label
+
+            coordenadas = extrair_landmarks_normalizados(
+                landmarks_da_mao
+            )
 
             if rotulo == "Left":
                 vetor_esquerda = coordenadas
@@ -57,59 +113,31 @@ def montar_vetor_duas_maos(resultado):
     return vetor_esquerda + vetor_direita
 
 
-def extrair_landmarks_normalizados(landmarks_da_mao):
-    """
-    Recebe os landmarks de UMA mão (objeto do MediaPipe) e retorna uma
-    lista achatada de 63 números (21 pontos x 3 coordenadas), já
-    normalizados por posição e escala.
-    """
-    pontos = landmarks_da_mao.landmark
-
-    origem_x = pontos[PULSO].x
-    origem_y = pontos[PULSO].y
-    origem_z = pontos[PULSO].z
-
-    # Distância entre pulso e base do dedo médio, usada como
-    # referência de escala (tamanho da mão naquele frame).
-    dx = pontos[BASE_DEDO_MEDIO].x - origem_x
-    dy = pontos[BASE_DEDO_MEDIO].y - origem_y
-    escala = (dx ** 2 + dy ** 2) ** 0.5
-
-    # Proteção: evita dividir por zero no caso raro da escala dar 0.
-    if escala == 0:
-        escala = 1e-6
-
-    coordenadas = []
-    for ponto in pontos:
-        x_relativo = (ponto.x - origem_x) / escala
-        y_relativo = (ponto.y - origem_y) / escala
-        z_relativo = (ponto.z - origem_z) / escala
-        coordenadas.extend([x_relativo, y_relativo, z_relativo])
-
-    return coordenadas
-
-
 def eh_vetor_zerado(vetor):
-    """Retorna True se o vetor for todo (ou quase todo) zero — ou seja,
-    representa uma mão que não foi detectada naquele frame."""
-    return all(abs(valor) < 1e-9 for valor in vetor)
+    """
+    Verifica se uma mão não foi detectada.
+    """
+
+    return all(
+        abs(valor) < 1e-9
+        for valor in vetor
+    )
 
 
 def espelhar_mao(vetor_de_uma_mao):
     """
-    Recebe os 63 números normalizados de UMA mão e devolve a versão
-    "espelhada", como se o mesmo sinal tivesse sido feito com a outra
-    mão. Como as coordenadas já são relativas ao pulso, espelhar é
-    simplesmente inverter o sinal da coordenada X de cada ponto (o
-    eixo horizontal) e manter Y e Z como estão.
+    Espelha uma mão invertendo o eixo X.
 
-    Isso é útil porque a maioria dos sinais de uma mão só têm o mesmo
-    "significado" não importa qual mão os faz — mas, para o
-    classificador, mão esquerda e mão direita ocupam posições
-    diferentes no vetor de entrada. Espelhar os dados na coleta ensina
-    o modelo que a forma vale para as duas mãos.
+    Mantém Y e Z.
     """
+
     espelhado = list(vetor_de_uma_mao)
-    for i in range(0, len(espelhado), 3):  # cada ponto tem 3 valores: x, y, z
+
+    for i in range(
+        0,
+        len(espelhado),
+        3,
+    ):
         espelhado[i] = -espelhado[i]
+
     return espelhado
