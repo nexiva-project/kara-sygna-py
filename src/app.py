@@ -1,7 +1,7 @@
 """
 kara-sygna-py — app.py: painel de controle único (interface gráfica).
 
-Versão corrigida para funcionar igual no Windows e no Linux/Ubuntu.
+fiVersão corrigida para funcionar igual no Windows e no Linux/Ubuntu.
 
 Por que mudou?
     A versão anterior usava `cv2.imshow` para abrir a câmera numa
