@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.1] - 2026-10-02
+
+### Corrigido
+- Bug no Linux/Ubuntu em que `cv2.imshow` abria múltiplas janelas de câmera, causado por conflito entre os backends gráficos do OpenCV (GTK) e do Tkinter.
+
+### Refatorado
+- Vídeo da câmera agora é renderizado dentro de um widget `Label` do Tkinter, embutido na própria janela do painel, em vez de uma janela separada do OpenCV.
+
+### Removido
+- Uso de `cv2.imshow` e `cv2.waitKey` para exibir a câmera (substituídos pela renderização via Tkinter).
+
+### Dependências
+- Adicionado `pillow` ao `requirements.txt` (necessário para converter frames da câmera em imagens exibíveis pelo Tkinter).
+
 ## [0.4.0] - 2026-09-18
 
 ### Adicionado
