@@ -1,13 +1,22 @@
 """
 kara-sygna-py — app.py: painel de controle único (interface gráfica).
 
-Baseado na estrutura de painel sugerida por um colega (caixas "MODO
-ENSINAR" / "MODO SINAL" + lista de sinais aprendidos), mas sem a
-visualização 3D — aqui a câmera mostra o vídeo normal, com o
-"esqueleto" da mão desenhado por cima (como nos passos anteriores do
-projeto).
+Versão corrigida para funcionar igual no Windows e no Linux/Ubuntu.
 
-Como funciona:
+Por que mudou?
+    A versão anterior usava `cv2.imshow` para abrir a câmera numa
+    janela separada, ao lado do painel do tkinter. No Windows isso
+    funciona (os dois usam sistemas de janela diferentes por baixo
+    dos panos), mas no Linux o backend gráfico do OpenCV (GTK) entra
+    em conflito com o loop de eventos do Tkinter — causando janelas
+    duplicadas, travamentos ou comportamento instável.
+
+    A correção: em vez de `cv2.imshow`, o vídeo agora é desenhado
+    DENTRO da própria janela do painel, num widget `Label` do
+    tkinter. Só existe UM sistema de janelas em jogo (o do Tk), então
+    o problema desaparece nas duas plataformas.
+
+Como funciona (igual a antes, só que numa janela só):
     - Digite o nome do sinal e clique em "COMEÇAR A ENSINAR": a partir
       daí, todo frame com mão detectada é salvo automaticamente (com
       espelhamento automático para sinais de uma mão só). Clique em
@@ -15,17 +24,17 @@ Como funciona:
     - Clique em "TREINAR IA" para retreinar o classificador com tudo
       que já foi ensinado até agora.
     - Clique em "INICIAR RECONHECIMENTO" para ver o sinal reconhecido
-      ao vivo (com suavização: só mostra um sinal quando ele aparece
-      com consistência nos últimos frames, para reduzir confusão
-      entre sinais parecidos).
+      ao vivo (com suavização temporal).
     - "PARAR" interrompe tanto o ensino quanto o reconhecimento.
-
-A janela da câmera abre separada do painel (é assim que o OpenCV
-funciona) — mas ambas são atualizadas pelo mesmo loop do tkinter, sem
-precisar de threads.
+    - Feche pela própria janela (botão "FECHAR" ou o X) — não precisa
+      mais apertar 'q' em nenhum lugar.
 
 Como rodar:
     python src/app.py
+
+Dependência extra (além do requirements.txt já usado antes):
+    pillow (para converter o frame da câmera em algo que o tkinter
+    consegue exibir). Já está no requirements.txt atualizado.
 """
 
 import csv
@@ -38,6 +47,7 @@ import cv2
 import joblib
 import mediapipe as mp
 import pandas as pd
+from PIL import Image, ImageTk
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
@@ -83,6 +93,7 @@ class KaraSygnaApp:
         self.total_amostras = 0
         self.modelo = None
         self.historico_previsoes = deque(maxlen=TAMANHO_JANELA)
+        self.imagem_atual = None  # referência viva p/ não sumir (bug clássico do ImageTk)
 
         self.criar_controles()
         self.atualizar_lista_sinais()
@@ -106,8 +117,21 @@ class KaraSygnaApp:
     # Interface
     # ------------------------------------------------------------------
     def criar_controles(self):
-        conteudo = tk.Frame(self.root, padx=16, pady=14)
-        conteudo.pack()
+        principal = tk.Frame(self.root, padx=16, pady=14)
+        principal.pack()
+
+        # --- Coluna da esquerda: vídeo ---
+        coluna_video = tk.Frame(principal)
+        coluna_video.grid(row=0, column=0, padx=(0, 16), sticky="n")
+
+        self.label_video = tk.Label(coluna_video, bg="black", width=640, height=480)
+        self.label_video.pack()
+
+        tk.Button(coluna_video, text="FECHAR", command=self.fechar).pack(fill="x", pady=(8, 0))
+
+        # --- Coluna da direita: controles ---
+        conteudo = tk.Frame(principal)
+        conteudo.grid(row=0, column=1, sticky="n")
 
         ensinar = tk.LabelFrame(conteudo, text=" MODO ENSINAR ", padx=12, pady=10)
         ensinar.pack(fill="x", pady=(0, 10))
@@ -148,12 +172,6 @@ class KaraSygnaApp:
         tk.Label(conteudo, textvariable=self.status, justify="left", anchor="w", wraplength=300).pack(
             fill="x", pady=(12, 0)
         )
-        tk.Label(
-            conteudo,
-            text="A janela separada mostra a câmera com o esqueleto da mão.\nPressione Q nela para fechar.",
-            fg="#555555",
-            justify="left",
-        ).pack(fill="x", pady=(8, 0))
 
     def atualizar_lista_sinais(self):
         """Mostra cada palavra gravada, sua quantidade de exemplos e se já foi treinada."""
@@ -171,7 +189,7 @@ class KaraSygnaApp:
             if os.path.exists(ARQUIVO_MODELO):
                 try:
                     sinais_no_modelo = set(joblib.load(ARQUIVO_MODELO).classes_)
-                except Exception:  # noqa: BLE001, S110
+                except Exception:
                     pass
             contagem = dados["rotulo"].value_counts().sort_index()
             for palavra, quantidade in contagem.items():
@@ -179,7 +197,7 @@ class KaraSygnaApp:
                 self.lista_sinais.insert(
                     tk.END, f"{palavra} — {quantidade} exemplos — {estado}"
                 )
-        except Exception as erro: # noqa: BLE001
+        except Exception as erro:
             self.lista_sinais.insert(tk.END, f"Não foi possível ler os sinais: {erro}")
 
     # ------------------------------------------------------------------
@@ -222,8 +240,6 @@ class KaraSygnaApp:
             self.status.set("Treinando a IA... aguarde.")
             self.root.update_idletasks()
 
-            # Separamos uma parte para medir a acurácia, mas o modelo
-            # final é treinado com TODOS os dados disponíveis.
             if y.nunique() > 1 and len(dados) >= 10:
                 X_treino, X_teste, y_treino, y_teste = train_test_split(
                     X, y, test_size=0.2, random_state=42, stratify=y
@@ -242,7 +258,7 @@ class KaraSygnaApp:
             texto_acuracia = f" (acurácia estimada: {acuracia:.0%})" if acuracia is not None else ""
             self.status.set(f"IA treinada com {len(dados)} exemplos e {y.nunique()} sinais{texto_acuracia}.")
             messagebox.showinfo("IA treinada", "Pronto! Agora use INICIAR RECONHECIMENTO.")
-        except Exception as erro: # noqa: BLE001
+        except Exception as erro:
             messagebox.showerror("Não foi possível treinar", str(erro))
 
     def iniciar_reconhecimento(self):
@@ -251,7 +267,7 @@ class KaraSygnaApp:
         except FileNotFoundError:
             messagebox.showwarning("Modelo não encontrado", "Ensine sinais e clique em TREINAR IA primeiro.")
             return
-        except Exception as erro: # noqa: BLE001
+        except Exception as erro:
             messagebox.showerror("Modelo inválido", str(erro))
             return
         self.historico_previsoes.clear()
@@ -276,7 +292,8 @@ class KaraSygnaApp:
         self.total_amostras += len(linhas)
 
     # ------------------------------------------------------------------
-    # Loop principal: câmera + tkinter no mesmo laço (sem threads)
+    # Loop principal: câmera + tkinter no mesmo laço, vídeo embutido
+    # num Label (nada de cv2.imshow — é isso que resolve o bug do Linux)
     # ------------------------------------------------------------------
     def atualizar_camera(self):
         if not self.captura.isOpened():
@@ -289,7 +306,7 @@ class KaraSygnaApp:
 
         frame = cv2.flip(frame, 1)
         resultado = self.hands.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        texto, cor = "Escolha um modo", (9, 255, 0)
+        texto, cor = "Escolha um modo", (0, 255, 9)  # BGR (o que o cv2.putText espera)
 
         if resultado.multi_hand_landmarks:
             for landmarks_da_mao in resultado.multi_hand_landmarks:
@@ -311,7 +328,6 @@ class KaraSygnaApp:
                 sinal_previsto = self.modelo.classes_[indice]
                 confianca = probabilidades[indice]
 
-                # Suavização temporal: só "vota" quando a confiança é alta.
                 self.historico_previsoes.append(
                     sinal_previsto if confianca >= CONFIANCA_MINIMA else None
                 )
@@ -332,12 +348,13 @@ class KaraSygnaApp:
 
         cv2.putText(frame, texto, (18, frame.shape[0] - 22),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.72, cor, 2, cv2.LINE_AA)
-        cv2.imshow("Kara SYGNA IA - Câmera", frame)
 
-        tecla = cv2.waitKey(1) & 0xFF
-        if tecla == ord("q"):
-            self.fechar()
-            return
+        # --- Aqui está a mudança principal: em vez de cv2.imshow, ---
+        # --- convertemos o frame para algo que o tkinter sabe exibir ---
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        imagem_pil = Image.fromarray(frame_rgb)
+        self.imagem_atual = ImageTk.PhotoImage(image=imagem_pil)
+        self.label_video.configure(image=self.imagem_atual)
 
         self.root.after(15, self.atualizar_camera)
 
@@ -346,7 +363,6 @@ class KaraSygnaApp:
             self.hands.close()
         if hasattr(self, "captura"):
             self.captura.release()
-        cv2.destroyAllWindows()
         self.root.destroy()
 
     def executar(self):
