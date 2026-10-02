@@ -28,35 +28,6 @@ PULSO = 0
 BASE_DEDO_MEDIO = 9
 
 
-def montar_vetor_duas_maos(resultado):
-    """
-    Recebe o 'resultado' bruto do MediaPipe (com multi_hand_landmarks
-    e multi_handedness) e retorna um vetor de tamanho FIXO com
-    2 * FEATURES_POR_MAO = 126 números: primeiro os 63 da mão
-    ESQUERDA, depois os 63 da mão DIREITA.
-
-    Se alguma das mãos não for detectada naquele frame, a parte dela
-    no vetor é preenchida com zeros. Isso garante que toda amostra
-    tenha sempre o mesmo tamanho, não importa quantas mãos apareceram
-    -- essencial para treinar e usar o classificador depois.
-    """
-    vetor_esquerda = [0.0] * FEATURES_POR_MAO
-    vetor_direita = [0.0] * FEATURES_POR_MAO
-
-    if resultado.multi_hand_landmarks and resultado.multi_handedness:
-        zipped = zip(resultado.multi_hand_landmarks, resultado.multi_handedness)
-        for landmarks_da_mao, info_da_mao in zipped:
-            rotulo = info_da_mao.classification[0].label  # "Left" ou "Right"
-            coordenadas = extrair_landmarks_normalizados(landmarks_da_mao)
-
-            if rotulo == "Left":
-                vetor_esquerda = coordenadas
-            else:
-                vetor_direita = coordenadas
-
-    return vetor_esquerda + vetor_direita
-
-
 def extrair_landmarks_normalizados(landmarks_da_mao):
     """
     Recebe os landmarks de UMA mão (objeto do MediaPipe) e retorna uma
@@ -69,13 +40,9 @@ def extrair_landmarks_normalizados(landmarks_da_mao):
     origem_y = pontos[PULSO].y
     origem_z = pontos[PULSO].z
 
-    # Distância entre pulso e base do dedo médio, usada como
-    # referência de escala (tamanho da mão naquele frame).
     dx = pontos[BASE_DEDO_MEDIO].x - origem_x
     dy = pontos[BASE_DEDO_MEDIO].y - origem_y
     escala = (dx ** 2 + dy ** 2) ** 0.5
-
-    # Proteção: evita dividir por zero no caso raro da escala dar 0.
     if escala == 0:
         escala = 1e-6
 
@@ -89,6 +56,30 @@ def extrair_landmarks_normalizados(landmarks_da_mao):
     return coordenadas
 
 
+def montar_vetor_duas_maos(resultado):
+    """
+    Recebe o 'resultado' bruto do MediaPipe (com multi_hand_landmarks
+    e multi_handedness) e retorna um vetor de tamanho FIXO com
+    2 * FEATURES_POR_MAO = 126 números: primeiro os 63 da mão
+    ESQUERDA, depois os 63 da mão DIREITA. A mão não detectada no
+    frame fica com zeros na sua parte do vetor.
+    """
+    vetor_esquerda = [0.0] * FEATURES_POR_MAO
+    vetor_direita = [0.0] * FEATURES_POR_MAO
+
+    if resultado.multi_hand_landmarks and resultado.multi_handedness:
+        zipped = zip(resultado.multi_hand_landmarks, resultado.multi_handedness)
+        for landmarks_da_mao, info_da_mao in zipped:
+            rotulo = info_da_mao.classification[0].label  # "Left" ou "Right"
+            coordenadas = extrair_landmarks_normalizados(landmarks_da_mao)
+            if rotulo == "Left":
+                vetor_esquerda = coordenadas
+            else:
+                vetor_direita = coordenadas
+
+    return vetor_esquerda + vetor_direita
+
+
 def eh_vetor_zerado(vetor):
     """Retorna True se o vetor for todo (ou quase todo) zero — ou seja,
     representa uma mão que não foi detectada naquele frame."""
@@ -100,16 +91,9 @@ def espelhar_mao(vetor_de_uma_mao):
     Recebe os 63 números normalizados de UMA mão e devolve a versão
     "espelhada", como se o mesmo sinal tivesse sido feito com a outra
     mão. Como as coordenadas já são relativas ao pulso, espelhar é
-    simplesmente inverter o sinal da coordenada X de cada ponto (o
-    eixo horizontal) e manter Y e Z como estão.
-
-    Isso é útil porque a maioria dos sinais de uma mão só têm o mesmo
-    "significado" não importa qual mão os faz — mas, para o
-    classificador, mão esquerda e mão direita ocupam posições
-    diferentes no vetor de entrada. Espelhar os dados na coleta ensina
-    o modelo que a forma vale para as duas mãos.
+    simplesmente inverter o sinal da coordenada X de cada ponto.
     """
     espelhado = list(vetor_de_uma_mao)
-    for i in range(0, len(espelhado), 3):  # cada ponto tem 3 valores: x, y, z
+    for i in range(0, len(espelhado), 3):
         espelhado[i] = -espelhado[i]
     return espelhado
