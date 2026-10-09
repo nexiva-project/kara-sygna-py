@@ -1,107 +1,78 @@
 """
-kara-sygna-py — Passo 7: rodar o reconhecimento em tempo real.
+Kara Sygna — reconhecimento em tempo real pelo terminal/janela OpenCV.
 
-Objetivo deste script:
-    Juntar tudo que construímos: captura de vídeo (Passo 1),
-    detecção de mão (Passo 2), extração de landmarks (Passo 3) e o
-    classificador treinado (Passo 6), para mostrar o sinal reconhecido
-    ao vivo, na tela.
-
-Pré-requisito:
-    Ter rodado antes o src/treinar_modelo.py, gerando o arquivo
-    modelo_sinais.pkl.
-
-Como rodar:
-    python src/reconhecer_sinais.py
+Pré-requisito: ter treinado (treinar_modelo.py ou botão TREINAR IA).
+    python reconhecer_sinais.py
 """
 
-import cv2
 import joblib
+import cv2
 import mediapipe as mp
-import pandas as pd
 
-from utils import montar_vetor_duas_maos
-
-ARQUIVO_MODELO = "modelo_sinais.pkl"
-
-# Só mostramos o sinal na tela quando o modelo está bem confiante,
-# para evitar "piscar" um sinal errado por um instante.
-CONFIANCA_MINIMA = 0.7
+from reconhecimento import IGNORAR, Estabilizador, prever
+from treinar_modelo import ARQUIVO_MODELO
+from utils import extrair_features, nomes_features
 
 
 def main():
-    print(f"Carregando modelo de: {ARQUIVO_MODELO}")
     modelo = joblib.load(ARQUIVO_MODELO)
+    if list(modelo.feature_names_in_) != nomes_features():
+        print("Este modelo é de uma versão antiga. Grave os sinais de novo e treine.")
+        return
 
-    mp_hands = mp.solutions.hands
-    mp_desenho = mp.solutions.drawing_utils
-
-    hands = mp_hands.Hands(
-        max_num_hands=2,
-        min_detection_confidence=0.7,
-        min_tracking_confidence=0.5,
-    )
-
+    mp_hands, mp_face = mp.solutions.hands, mp.solutions.face_mesh
     captura = cv2.VideoCapture(0)
     if not captura.isOpened():
         print("Não foi possível acessar a câmera.")
         return
 
-    print("Câmera aberta! Mostre um sinal treinado. Pressione 'q' para sair.")
+    estabilizador = Estabilizador()
+    frase = []
+    print("Câmera aberta! Faça um sinal. 'q' sai, 'c' limpa o texto.")
 
-    while True:
-        ret, frame = captura.read()
-        if not ret:
-            break
+    with mp_hands.Hands(max_num_hands=2, min_detection_confidence=0.7,
+                        min_tracking_confidence=0.5) as hands, \
+         mp_face.FaceMesh(max_num_faces=1, min_detection_confidence=0.7,
+                          min_tracking_confidence=0.5) as face:
+        while True:
+            ret, frame = captura.read()
+            if not ret:
+                break
+            frame = cv2.flip(frame, 1)
+            altura, largura = frame.shape[:2]
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            res_maos = hands.process(rgb)
 
-        frame = cv2.flip(frame, 1)
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        resultado = hands.process(frame_rgb)
+            aceito, texto, cor = None, "Nenhuma mao detectada", (0, 0, 255)
+            if res_maos.multi_hand_landmarks:
+                for lm in res_maos.multi_hand_landmarks:
+                    mp.solutions.drawing_utils.draw_landmarks(
+                        frame, lm, mp_hands.HAND_CONNECTIONS)
+                vetor = extrair_features(res_maos, face.process(rgb), largura, altura)
+                sinal, confianca, _, ok = prever(modelo, vetor)
+                if ok:
+                    aceito, cor = sinal, (0, 255, 0)
+                    texto = f"Sinal: {sinal} ({confianca:.0%})"
+                else:
+                    texto, cor = f"Incerto ({confianca:.0%})", (0, 165, 255)
 
-        texto = "Nenhuma mao detectada"
-        cor = (0, 0, 255)
+            confirmado = estabilizador.atualizar(aceito)
+            if confirmado and confirmado not in IGNORAR:
+                frase.append(confirmado)
 
-        if resultado.multi_hand_landmarks:
-            for landmarks_da_mao in resultado.multi_hand_landmarks:
-                mp_desenho.draw_landmarks(
-                    frame, landmarks_da_mao, mp_hands.HAND_CONNECTIONS
-                )
+            cv2.putText(frame, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, cor, 2)
+            cv2.putText(frame, " ".join(frase[-8:]), (10, altura - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+            cv2.imshow("kara-sygna - Reconhecimento", frame)
 
-            # Uma predição por FRAME, com o vetor das duas mãos juntas
-            # (a mesma lógica usada na coleta de dados).
-            vetor = montar_vetor_duas_maos(resultado)
-
-            # Empacotamos o vetor num DataFrame com os MESMOS nomes de
-            # coluna usados no treino (evita o warning do scikit-learn
-            # e garante que a ordem das colunas bate certinho).
-            entrada = pd.DataFrame([vetor], columns=modelo.feature_names_in_)
-
-            # predict_proba retorna a probabilidade do modelo para
-            # cada sinal que ele conhece; pegamos a maior delas.
-            probabilidades = modelo.predict_proba(entrada)[0]
-            indice_melhor = probabilidades.argmax()
-            sinal_previsto = modelo.classes_[indice_melhor]
-            confianca = probabilidades[indice_melhor]
-
-            if confianca >= CONFIANCA_MINIMA:
-                texto = f"Sinal: {sinal_previsto} ({confianca:.0%})"
-                cor = (0, 255, 0)
-            else:
-                texto = f"Incerto ({confianca:.0%})"
-                cor = (0, 165, 255)
-
-        cv2.putText(
-            frame, texto, (10, 30),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, cor, 2,
-        )
-        cv2.imshow("kara-sygna-py - Passo 7: Reconhecimento em Tempo Real", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+            tecla = cv2.waitKey(1) & 0xFF
+            if tecla == ord("q"):
+                break
+            if tecla == ord("c"):
+                frase.clear()
 
     captura.release()
     cv2.destroyAllWindows()
-    hands.close()
 
 
 if __name__ == "__main__":

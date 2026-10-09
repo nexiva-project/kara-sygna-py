@@ -1,415 +1,93 @@
-"""
-Kara Sygna — aumento de dados com rotação 3D da mão.
+"""Kara Sygna — aumento de dados (só para o conjunto de TREINO).
 
-Cria variações do mesmo sinal com a mão:
-- inclinada para frente/trás
-- inclinada para esquerda/direita
-- girada no próprio eixo
-- combinações dessas rotações
+Antes, o aumento gerava um CSV e o treino dividia treino/teste depois:
+variações do mesmo quadro caíam nos dois lados e a acurácia mentia.
+Agora o aumento é feito EM MEMÓRIA, depois da divisão, só no treino
+(ver treinar_modelo.py). Não existe mais dados_sinais_aumentado.csv.
 
-A rotação acontece em torno do pulso.
-
-Uso:
-    python src/aumentar_dados.py
-
-Depois:
-    python src/treinar_modelo.py
+Variações geradas por amostra:
+* rotação 3D global (como se a câmera/mão estivesse inclinada);
+* pequena rotação extra independente em cada mão;
+* variação de proporção da mão (dedos mais longos/curtos, mãos de
+  outras pessoas);
+* ruído nos landmarks, na posição relativa ao rosto e entre as mãos;
+* espelhamento (esq <-> dir) para sinais de uma mão só.
 """
 
-import csv
-import math
-import os
+import numpy as np
 
-from utils import FEATURES_POR_MAO
-
-
-ARQUIVO_CSV = "dados_sinais.csv"
-
-# ---------------------------------------------------------
-# ROTAÇÕES 3D
-#
-# X = inclinar para frente/trás
-# Y = inclinar para esquerda/direita
-# Z = girar a mão no próprio plano
-# ---------------------------------------------------------
-
-ROTACOES = [
-    # Pequenas rotações
-    (15, 0, 0),
-    (-15, 0, 0),
-
-    (0, 15, 0),
-    (0, -15, 0),
-
-    (0, 0, 15),
-    (0, 0, -15),
-
-    # Rotações médias
-    (30, 0, 0),
-    (-30, 0, 0),
-
-    (0, 30, 0),
-    (0, -30, 0),
-
-    (0, 0, 30),
-    (0, 0, -30),
-
-    # Combinações
-    (20, 20, 0),
-    (-20, -20, 0),
-
-    (20, -20, 0),
-    (-20, 20, 0),
-
-    (20, 0, 20),
-    (-20, 0, -20),
-
-    (0, 20, 20),
-    (0, -20, -20),
-]
+from utils import (
+    IDX_DIR, IDX_ENTRE_MAOS, IDX_ESQ, IDX_PRESENTE_DIR, IDX_PRESENTE_ESQ,
+    IDX_PUNHO_ROSTO_DIR, IDX_PUNHO_ROSTO_ESQ, IDX_ROSTO, espelhar_features,
+)
 
 
-def vetor_zerado(vetor):
-    """
-    Verifica se a mão não foi detectada.
-    """
+def matrizes_rotacao(rx, ry, rz):
+    """Matrizes (n, 3, 3) a partir de ângulos em graus (arrays de tamanho n)."""
+    rx, ry, rz = (np.radians(np.asarray(a, dtype=np.float64)) for a in (rx, ry, rz))
+    n = len(rx)
+    cx, sx, cy, sy, cz, sz = np.cos(rx), np.sin(rx), np.cos(ry), np.sin(ry), np.cos(rz), np.sin(rz)
 
-    return all(
-        abs(valor) < 1e-9
-        for valor in vetor
-    )
-
-
-def matriz_rotacao(rx, ry, rz):
-    """
-    Cria uma matriz de rotação 3D.
-
-    rx = rotação no eixo X
-    ry = rotação no eixo Y
-    rz = rotação no eixo Z
-    """
-
-    rx = math.radians(rx)
-    ry = math.radians(ry)
-    rz = math.radians(rz)
-
-    cx = math.cos(rx)
-    sx = math.sin(rx)
-
-    cy = math.cos(ry)
-    sy = math.sin(ry)
-
-    cz = math.cos(rz)
-    sz = math.sin(rz)
-
-    # Rotação X
-    matriz_x = [
-        [1, 0, 0],
-        [0, cx, -sx],
-        [0, sx, cx],
-    ]
-
-    # Rotação Y
-    matriz_y = [
-        [cy, 0, sy],
-        [0, 1, 0],
-        [-sy, 0, cy],
-    ]
-
-    # Rotação Z
-    matriz_z = [
-        [cz, -sz, 0],
-        [sz, cz, 0],
-        [0, 0, 1],
-    ]
-
-    # Primeiro X
-    temp = multiplicar_matrizes(
-        matriz_y,
-        matriz_x,
-    )
-
-    # Depois Y
-    resultado = multiplicar_matrizes(
-        matriz_z,
-        temp,
-    )
-
-    return resultado
+    mx = np.zeros((n, 3, 3)); my = np.zeros((n, 3, 3)); mz = np.zeros((n, 3, 3))
+    mx[:, 0, 0] = 1; mx[:, 1, 1] = cx; mx[:, 1, 2] = -sx; mx[:, 2, 1] = sx; mx[:, 2, 2] = cx
+    my[:, 1, 1] = 1; my[:, 0, 0] = cy; my[:, 0, 2] = sy; my[:, 2, 0] = -sy; my[:, 2, 2] = cy
+    mz[:, 2, 2] = 1; mz[:, 0, 0] = cz; mz[:, 0, 1] = -sz; mz[:, 1, 0] = sz; mz[:, 1, 1] = cz
+    return mz @ my @ mx
 
 
-def multiplicar_matrizes(a, b):
-    """
-    Multiplica duas matrizes 3x3.
-    """
+def _variar(X, rng, intensidade):
+    n = len(X)
+    V = X.copy()
 
-    resultado = [
-        [0.0, 0.0, 0.0]
-        for _ in range(3)
-    ]
+    ang = lambda graus: rng.uniform(-graus, graus, n) * intensidade
+    global_R = matrizes_rotacao(ang(25), ang(25), ang(20))
 
-    for i in range(3):
+    for indices, col_presente in ((IDX_ESQ, IDX_PRESENTE_ESQ), (IDX_DIR, IDX_PRESENTE_DIR)):
+        presente = X[:, col_presente] > 0.5
+        pontos = X[:, indices].reshape(n, 21, 3)
 
-        for j in range(3):
-
-            resultado[i][j] = sum(
-                a[i][k] * b[k][j]
-                for k in range(3)
-            )
-
-    return resultado
-
-
-def aplicar_rotacao(vetor, rx, ry, rz):
-    """
-    Aplica uma rotação 3D aos 21 landmarks.
-
-    A rotação acontece em torno do pulso,
-    que já é a origem porque os landmarks
-    estão normalizados pelo utils.py.
-    """
-
-    matriz = matriz_rotacao(
-        rx,
-        ry,
-        rz,
-    )
-
-    resultado = []
-
-    for i in range(
-        0,
-        len(vetor),
-        3,
-    ):
-
-        x = vetor[i]
-        y = vetor[i + 1]
-        z = vetor[i + 2]
-
-        novo_x = (
-            matriz[0][0] * x
-            + matriz[0][1] * y
-            + matriz[0][2] * z
+        jitter_R = matrizes_rotacao(
+            rng.normal(0, 5, n), rng.normal(0, 5, n), rng.normal(0, 5, n)
         )
+        R = jitter_R @ global_R
+        pontos = np.einsum("nij,nkj->nki", R, pontos)
+        pontos = pontos * rng.uniform(0.92, 1.08, (n, 1, 3))   # proporção da mão
+        ruido = rng.normal(0, 0.02, pontos.shape)
+        ruido[:, 0, :] = 0                                      # punho fica na origem
+        pontos = pontos + ruido
 
-        novo_y = (
-            matriz[1][0] * x
-            + matriz[1][1] * y
-            + matriz[1][2] * z
-        )
+        V[:, indices] = np.where(presente[:, None], pontos.reshape(n, 63), 0.0)
 
-        novo_z = (
-            matriz[2][0] * x
-            + matriz[2][1] * y
-            + matriz[2][2] * z
-        )
+    # posições relativas (x, y): escala + ruído, só onde já existiam
+    for indices in (IDX_PUNHO_ROSTO_ESQ, IDX_PUNHO_ROSTO_DIR, IDX_ENTRE_MAOS):
+        bloco = X[:, indices]
+        novo = bloco * rng.uniform(0.9, 1.1, (n, 1)) + rng.normal(0, 0.05, bloco.shape)
+        novo[:, 2] = 0.0
+        V[:, indices] = np.where(np.abs(bloco).sum(axis=1, keepdims=True) > 1e-9, novo, 0.0)
 
-        resultado.extend([
-            novo_x,
-            novo_y,
-            novo_z,
-        ])
-
-    return resultado
-
-
-def aumentar_duas_maos(vetor):
-    """
-    Rotaciona as duas mãos juntas.
-
-    Isso é importante para sinais que utilizam
-    as duas mãos: a relação entre elas permanece
-    consistente.
-    """
-
-    esquerda = vetor[
-        :FEATURES_POR_MAO
-    ]
-
-    direita = vetor[
-        FEATURES_POR_MAO:
-    ]
-
-    novas_amostras = []
-
-    for rx, ry, rz in ROTACOES:
-
-        if vetor_zerado(esquerda):
-            nova_esquerda = esquerda
-        else:
-            nova_esquerda = aplicar_rotacao(
-                esquerda,
-                rx,
-                ry,
-                rz,
-            )
-
-        if vetor_zerado(direita):
-            nova_direita = direita
-        else:
-            nova_direita = aplicar_rotacao(
-                direita,
-                rx,
-                ry,
-                rz,
-            )
-
-        nova_amostra = (
-            nova_esquerda
-            + nova_direita
-        )
-
-        novas_amostras.append(
-            nova_amostra
-        )
-
-    return novas_amostras
+    rosto = X[:, IDX_ROSTO]
+    novo = rosto * rng.uniform(0.95, 1.05, (n, 1)) + rng.normal(0, 0.01, rosto.shape)
+    V[:, IDX_ROSTO] = np.where(np.abs(rosto).sum(axis=1, keepdims=True) > 1e-9, novo, 0.0)
+    return V
 
 
-def main():
-
-    if not os.path.exists(ARQUIVO_CSV):
-
-        print(
-            f"Arquivo não encontrado: "
-            f"{ARQUIVO_CSV}"
-        )
-
-        return
-
-    print(
-        f"Lendo dados de: "
-        f"{ARQUIVO_CSV}"
-    )
-
-    with open(
-        ARQUIVO_CSV,
-        "r",
-        newline="",
-        encoding="utf-8",
-    ) as arquivo:
-
-        leitor = csv.reader(arquivo)
-
-        cabecalho = next(leitor)
-
-        linhas_originais = list(leitor)
-
-    print(
-        f"Amostras originais: "
-        f"{len(linhas_originais)}"
-    )
-
-    novas_linhas = []
-
-    for linha in linhas_originais:
-
-        rotulo = linha[0]
-
-        valores = [
-            float(valor)
-            for valor in linha[1:]
-        ]
-
-        quantidade_esperada = (
-            FEATURES_POR_MAO * 2
-        )
-
-        if len(valores) != quantidade_esperada:
-
-            print(
-                f"Ignorando '{rotulo}': "
-                f"{len(valores)} valores."
-            )
-
-            continue
-
-        variantes = aumentar_duas_maos(
-            valores
-        )
-
-        for variante in variantes:
-
-            novas_linhas.append(
-                [rotulo] + variante
-            )
-
-    if not novas_linhas:
-
-        print(
-            "Nenhuma nova amostra criada."
-        )
-
-        return
-
-    # ---------------------------------------------------------
-    # ADICIONA AS VARIAÇÕES AO CSV
-    # ---------------------------------------------------------
-
-    with open(
-        ARQUIVO_CSV,
-        "a",
-        newline="",
-        encoding="utf-8",
-    ) as arquivo:
-
-        escritor = csv.writer(arquivo)
-
-        escritor.writerows(
-            novas_linhas
-        )
-
-    print()
-    print(
-        "======================================"
-    )
-
-    print(
-        "AUMENTO DE DADOS CONCLUÍDO"
-    )
-
-    print(
-        "======================================"
-    )
-
-    print(
-        f"Originais: "
-        f"{len(linhas_originais)}"
-    )
-
-    print(
-        f"Novas: "
-        f"{len(novas_linhas)}"
-    )
-
-    print(
-        f"Rotações por amostra: "
-        f"{len(ROTACOES)}"
-    )
-
-    print()
-
-    print(
-        "Agora treine novamente:"
-    )
-
-    print(
-        "python src/treinar_modelo.py"
-    )
-
-    print()
-
-    print(
-        "IMPORTANTE:"
-    )
-
-    print(
-        "Não execute este script novamente "
-        "sobre o mesmo CSV, pois as rotações "
-        "serão adicionadas novamente."
-    )
+def gerar_variantes(X, n_variantes=8, rng=None, intensidade=1.0):
+    X = np.asarray(X, dtype=np.float64)
+    rng = rng or np.random.default_rng(42)
+    return np.vstack([_variar(X, rng, intensidade) for _ in range(n_variantes)])
 
 
-if __name__ == "__main__":
-    main()
+def expandir_treino(X, y, n_variantes=8, rng=None):
+    """Original + espelhados (sinais de uma mão) + variações aleatórias."""
+    X = np.asarray(X, dtype=np.float64)
+    y = np.asarray(y)
+    rng = rng or np.random.default_rng(42)
+
+    uma_mao = (X[:, IDX_PRESENTE_ESQ] + X[:, IDX_PRESENTE_DIR]) == 1
+    X0 = np.vstack([X, espelhar_features(X[uma_mao])])
+    y0 = np.concatenate([y, y[uma_mao]])
+
+    if n_variantes <= 0:
+        return X0, y0
+    V = gerar_variantes(X0, n_variantes, rng)
+    return np.vstack([X0, V]), np.concatenate([y0, np.tile(y0, n_variantes)])
