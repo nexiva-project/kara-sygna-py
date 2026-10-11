@@ -20,14 +20,21 @@ def test_categorias_pelo_nome_do_modulo():
 
 
 def test_formato_da_linha_de_log():
-    registro = logging.LogRecord("kara_sygna.ia.x", logging.INFO, "", 0, "treinando", None, None)
+    registro = logging.LogRecord(
+        "kara_sygna.ia.x", logging.INFO, "", 0, "treinando", None, None
+    )
     linha = FormatadorKara().format(registro)
     assert linha.endswith("[MODEL] treinando") and linha[2] == ":"
 
 
 def test_configurar_logging_nao_duplica_handler():
-    configurar_logging(); configurar_logging()
-    manipuladores = [h for h in logging.getLogger("kara_sygna").handlers if getattr(h, "_kara_console", False)]
+    configurar_logging()
+    configurar_logging()
+    manipuladores = [
+        h
+        for h in logging.getLogger("kara_sygna").handlers
+        if getattr(h, "_kara_console", False)
+    ]
     assert len(manipuladores) == 1
 
 
@@ -39,19 +46,26 @@ def test_render_devolve_imagem_com_as_maos(rng):
 
 
 def test_render_aceita_uma_mao_so(rng):
-    assert desenhar_quadro_sinal(vetor_de_uma_mao(rng, "esq"), (300, 250), 1.0, "oi").shape == (250, 300, 3)
+    assert desenhar_quadro_sinal(
+        vetor_de_uma_mao(rng, "esq"), (300, 250), 1.0, "oi"
+    ).shape == (250, 300, 3)
 
 
 def test_dedos_levantados_mao_aberta_e_fechada():
     from types import SimpleNamespace as N
 
     def mao(pontas_longe: bool):
-        pts = [N(x=0.5, y=0.9) for _ in range(21)]              # tudo perto do pulso
+        pts = [N(x=0.5, y=0.9) for _ in range(21)]  # tudo perto do pulso
         for ponta, junta in ((8, 6), (12, 10), (16, 14), (20, 18)):
             pts[junta] = N(x=0.5, y=0.7)
             pts[ponta] = N(x=0.5, y=0.3 if pontas_longe else 0.75)
         pts[3], pts[4], pts[17] = N(x=0.45, y=0.8), N(x=0.45, y=0.8), N(x=0.6, y=0.85)
         return N(landmark=pts)
 
-    assert set(dedos_levantados(mao(True))) >= {"indicador", "medio", "anelar", "mindinho"}
+    assert set(dedos_levantados(mao(True))) >= {
+        "indicador",
+        "medio",
+        "anelar",
+        "mindinho",
+    }
     assert dedos_levantados(mao(False)) == []

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
-from typing import Optional
 
 import cv2
 
@@ -27,7 +26,12 @@ from kara_sygna.visao.detector_maos import DetectorMaos, tem_maos
 
 logger = logging.getLogger(__name__)
 
-ERROS_DE_USUARIO = (ErroAplicacao, ModeloInvalidoError, DadosInvalidosError, TreinoImpossivelError)
+ERROS_DE_USUARIO = (
+    ErroAplicacao,
+    ModeloInvalidoError,
+    DadosInvalidosError,
+    TreinoImpossivelError,
+)
 
 
 class JanelaPrincipal:
@@ -40,7 +44,13 @@ class JanelaPrincipal:
         detector: Detector de mãos já criado.
     """
 
-    def __init__(self, raiz: tk.Tk, controlador: ControladorSinais, camera: Camera, detector: DetectorMaos) -> None:
+    def __init__(
+        self,
+        raiz: tk.Tk,
+        controlador: ControladorSinais,
+        camera: Camera,
+        detector: DetectorMaos,
+    ) -> None:
         """Monta a interface e guarda câmera, detector e controlador (veja a classe)."""
         self._raiz = raiz
         self._controlador = controlador
@@ -49,8 +59,8 @@ class JanelaPrincipal:
 
         self._executor = ExecutorTk(raiz)
         self._log = JanelaLog(raiz)
-        self._janela_sinais: Optional[JanelaSinais] = None
-        self._janela_previa: Optional[JanelaPrevisualizacao] = None
+        self._janela_sinais: JanelaSinais | None = None
+        self._janela_previa: JanelaPrevisualizacao | None = None
         self._foto = None
         self._encerrado = False
         self._ultimo_erro_quadro = ""
@@ -61,13 +71,17 @@ class JanelaPrincipal:
         raiz.protocol("WM_DELETE_WINDOW", self.fechar)
 
         self._palavra = tk.StringVar()
-        self._status = tk.StringVar(value=f"Escolha um modo para começar. ({camera.descricao})")
+        self._status = tk.StringVar(
+            value=f"Escolha um modo para começar. ({camera.descricao})"
+        )
         self._construir()
         logger.info("Interface iniciada.")
 
     # ------------------------------------------------------------------ layout
 
-    def _caixa(self, mestre: tk.Misc, titulo: str, fundo: str, **opcoes) -> tk.LabelFrame:
+    def _caixa(
+        self, mestre: tk.Misc, titulo: str, fundo: str, **opcoes
+    ) -> tk.LabelFrame:
         """Cria uma caixa com título, no estilo do tema escuro."""
         return tk.LabelFrame(mestre, text=titulo, bg=fundo, fg=tema.TEXTO, **opcoes)
 
@@ -75,9 +89,13 @@ class JanelaPrincipal:
         """Cria todos os widgets da janela."""
         fundo = tk.Frame(self._raiz, bg=tema.FUNDO)
         fundo.pack(fill="both", expand=True)
-        tk.Label(fundo, text="KARA SYGNA", bg=tema.FUNDO, fg=tema.TEXTO, font=tema.FONTE_TITULO).pack(
-            anchor="w", padx=18, pady=(12, 5)
-        )
+        tk.Label(
+            fundo,
+            text="KARA SYGNA",
+            bg=tema.FUNDO,
+            fg=tema.TEXTO,
+            font=tema.FONTE_TITULO,
+        ).pack(anchor="w", padx=18, pady=(12, 5))
 
         superior = tk.Frame(fundo, bg=tema.FUNDO)
         superior.pack(fill="both", expand=True, padx=15, pady=(0, 8))
@@ -88,11 +106,19 @@ class JanelaPrincipal:
     def _construir_video(self, mestre: tk.Misc) -> None:
         """Área da câmera. O rótulo é posicionado com ``place`` para que o tamanho
         da imagem nunca altere o tamanho da área (evita que ela cresça sozinha)."""
-        caixa = self._caixa(mestre, " CÂMERA ", tema.FUNDO, font=tema.FONTE_CAIXA, bd=1, relief="solid")
+        caixa = self._caixa(
+            mestre, " CÂMERA ", tema.FUNDO, font=tema.FONTE_CAIXA, bd=1, relief="solid"
+        )
         caixa.pack(side="left", fill="both", expand=True, padx=(0, 8))
         self._area_video = tk.Frame(caixa, bg=tema.FUNDO_VIDEO)
         self._area_video.pack(fill="both", expand=True, padx=5, pady=5)
-        self._video = tk.Label(self._area_video, bg=tema.FUNDO_VIDEO, fg="#aaaaaa", text="Iniciando câmera...", font=("Arial", 14))
+        self._video = tk.Label(
+            self._area_video,
+            bg=tema.FUNDO_VIDEO,
+            fg="#aaaaaa",
+            text="Iniciando câmera...",
+            font=("Arial", 14),
+        )
         self._video.place(relx=0.5, rely=0.5, anchor="center")
 
     def _construir_painel(self, mestre: tk.Misc) -> None:
@@ -101,44 +127,83 @@ class JanelaPrincipal:
         painel.pack(side="right", fill="y")
         painel.pack_propagate(False)
 
-        ensinar = self._caixa(painel, " MODO ENSINAR ", tema.FUNDO_PAINEL, padx=10, pady=10)
+        ensinar = self._caixa(
+            painel, " MODO ENSINAR ", tema.FUNDO_PAINEL, padx=10, pady=10
+        )
         ensinar.pack(fill="x", padx=10, pady=(10, 8))
-        tk.Label(ensinar, text="Palavra do sinal:", bg=tema.FUNDO_PAINEL, fg=tema.TEXTO_SUAVE).pack(anchor="w")
+        tk.Label(
+            ensinar, text="Palavra do sinal:", bg=tema.FUNDO_PAINEL, fg=tema.TEXTO_SUAVE
+        ).pack(anchor="w")
         campo = tk.Entry(ensinar, textvariable=self._palavra, font=("Arial", 11))
         campo.pack(fill="x", pady=(5, 8))
         campo.bind("<Return>", lambda _e: self._iniciar_ensino())
-        tk.Button(ensinar, text="COMEÇAR A ENSINAR", command=self._iniciar_ensino, height=2).pack(fill="x")
-        tk.Button(ensinar, text="PARAR", command=self._parar).pack(fill="x", pady=(5, 0))
-        self._botao_treinar = tk.Button(ensinar, text="TREINAR IA", command=self._treinar, height=2)
+        tk.Button(
+            ensinar, text="COMEÇAR A ENSINAR", command=self._iniciar_ensino, height=2
+        ).pack(fill="x")
+        tk.Button(ensinar, text="PARAR", command=self._parar).pack(
+            fill="x", pady=(5, 0)
+        )
+        self._botao_treinar = tk.Button(
+            ensinar, text="TREINAR IA", command=self._treinar, height=2
+        )
         self._botao_treinar.pack(fill="x", pady=(8, 0))
 
         sinal = self._caixa(painel, " MODO SINAL ", tema.FUNDO_PAINEL, padx=10, pady=10)
         sinal.pack(fill="x", padx=10, pady=(0, 8))
-        tk.Button(sinal, text="INICIAR RECONHECIMENTO", command=self._iniciar_reconhecimento, height=2).pack(fill="x")
+        tk.Button(
+            sinal,
+            text="INICIAR RECONHECIMENTO",
+            command=self._iniciar_reconhecimento,
+            height=2,
+        ).pack(fill="x")
         tk.Button(sinal, text="PARAR", command=self._parar).pack(fill="x", pady=(5, 0))
 
-        tk.Button(painel, text="ABRIR SINAIS APRENDIDOS", command=self._abrir_sinais, height=2).pack(fill="x", padx=10, pady=(2, 4))
-        tk.Button(painel, text="ABRIR LOG", command=self._log.mostrar).pack(fill="x", padx=10, pady=(0, 8))
+        tk.Button(
+            painel, text="ABRIR SINAIS APRENDIDOS", command=self._abrir_sinais, height=2
+        ).pack(fill="x", padx=10, pady=(2, 4))
+        tk.Button(painel, text="ABRIR LOG", command=self._log.mostrar).pack(
+            fill="x", padx=10, pady=(0, 8)
+        )
 
         status = self._caixa(painel, " STATUS ", tema.FUNDO_PAINEL, padx=8, pady=8)
         status.pack(fill="x", padx=10, pady=(0, 10))
         tk.Label(
-            status, textvariable=self._status, bg=tema.FUNDO_PAINEL, fg=tema.TEXTO_SUAVE,
-            justify="left", anchor="w", wraplength=260,
+            status,
+            textvariable=self._status,
+            bg=tema.FUNDO_PAINEL,
+            fg=tema.TEXTO_SUAVE,
+            justify="left",
+            anchor="w",
+            wraplength=260,
         ).pack(fill="x")
 
     def _construir_texto(self, mestre: tk.Misc) -> None:
         """Caixa com o texto formado pelos sinais reconhecidos."""
-        caixa = self._caixa(mestre, " TEXTO DOS SINAIS ", tema.FUNDO, font=("Arial", 11, "bold"), padx=10, pady=10)
+        caixa = self._caixa(
+            mestre,
+            " TEXTO DOS SINAIS ",
+            tema.FUNDO,
+            font=("Arial", 11, "bold"),
+            padx=10,
+            pady=10,
+        )
         caixa.pack(fill="x", padx=15, pady=(0, 15))
         self._texto = scrolledtext.ScrolledText(
-            caixa, height=4, font=tema.FONTE_TEXTO_SINAIS, bg=tema.FUNDO_VIDEO, fg=tema.TEXTO,
-            insertbackground=tema.TEXTO, wrap="word", relief="flat",
+            caixa,
+            height=4,
+            font=tema.FONTE_TEXTO_SINAIS,
+            bg=tema.FUNDO_VIDEO,
+            fg=tema.TEXTO,
+            insertbackground=tema.TEXTO,
+            wrap="word",
+            relief="flat",
         )
         self._texto.pack(fill="both", expand=True)
         botoes = tk.Frame(caixa, bg=tema.FUNDO)
         botoes.pack(fill="x", pady=(8, 0))
-        tk.Button(botoes, text="LIMPAR TEXTO", command=self._limpar_texto).pack(side="right")
+        tk.Button(botoes, text="LIMPAR TEXTO", command=self._limpar_texto).pack(
+            side="right"
+        )
 
     # ------------------------------------------------------------- ações (botões)
 
@@ -205,8 +270,12 @@ class JanelaPrincipal:
             detalhe = f"\n\nAviso: {resultado.relatorio}"
         else:
             detalhe = f"\n\nAcurácia na validação: {resultado.acuracia_validacao:.0%}"
-        self._status.set(f"IA treinada com {resultado.amostras} exemplos e {len(resultado.classes)} sinais.")
-        messagebox.showinfo("IA treinada", "Pronto! Agora use INICIAR RECONHECIMENTO." + detalhe)
+        self._status.set(
+            f"IA treinada com {resultado.amostras} exemplos e {len(resultado.classes)} sinais."
+        )
+        messagebox.showinfo(
+            "IA treinada", "Pronto! Agora use INICIAR RECONHECIMENTO." + detalhe
+        )
 
     def _treino_falhou(self, erro: BaseException) -> None:
         """Mostra o motivo da falha no treinamento."""
@@ -239,7 +308,10 @@ class JanelaPrincipal:
             self._janela_sinais.atualizar()
             return
         self._janela_sinais = JanelaSinais(
-            self._raiz, self._controlador.listar_sinais, self._ver_sinal, self._apagar_sinal
+            self._raiz,
+            self._controlador.listar_sinais,
+            self._ver_sinal,
+            self._apagar_sinal,
         )
 
     def _ver_sinal(self, palavra: str) -> None:
@@ -279,9 +351,11 @@ class JanelaPrincipal:
                 self._agendar(100)
                 return
             self._processar_quadro(cv2.flip(quadro, 1))
-        except Exception as erro:  # noqa: BLE001 - o laço da câmera nunca pode morrer
+        except Exception as erro:
             mensagem = f"{type(erro).__name__}: {erro}"
-            if mensagem != self._ultimo_erro_quadro:  # evita repetir o mesmo erro 60 vezes por segundo
+            if (
+                mensagem != self._ultimo_erro_quadro
+            ):  # evita repetir o mesmo erro 60 vezes por segundo
                 logger.error("Erro no laço da câmera", exc_info=erro)
                 self._ultimo_erro_quadro = mensagem
             self._status.set(f"Erro na câmera: {erro}")
@@ -298,7 +372,9 @@ class JanelaPrincipal:
         """Detecta as mãos, aplica as regras e mostra o quadro."""
         resultado_maos = self._detector.detectar(quadro)
         self._detector.desenhar(quadro, resultado_maos)
-        vetor = montar_vetor_duas_maos(resultado_maos) if tem_maos(resultado_maos) else None
+        vetor = (
+            montar_vetor_duas_maos(resultado_maos) if tem_maos(resultado_maos) else None
+        )
 
         try:
             resposta = self._controlador.processar_quadro(vetor)
@@ -313,14 +389,20 @@ class JanelaPrincipal:
             if resposta.sinal_confirmado:
                 self._adicionar_texto(resposta.sinal_confirmado)
             if resposta.texto_video:
-                self._escrever_no_video(quadro, resposta.texto_video, tema.COR_VIDEO_BGR[resposta.nivel])
+                self._escrever_no_video(
+                    quadro, resposta.texto_video, tema.COR_VIDEO_BGR[resposta.nivel]
+                )
         self._mostrar(quadro)
 
     @staticmethod
     def _escrever_no_video(quadro, texto: str, cor: tuple[int, int, int]) -> None:
         """Escreve o texto em uma faixa escura no topo do quadro."""
-        cv2.rectangle(quadro, (10, 10), (min(quadro.shape[1] - 10, 700), 55), (15, 15, 18), -1)
-        cv2.putText(quadro, texto, (20, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.65, cor, 2, cv2.LINE_AA)
+        cv2.rectangle(
+            quadro, (10, 10), (min(quadro.shape[1] - 10, 700), 55), (15, 15, 18), -1
+        )
+        cv2.putText(
+            quadro, texto, (20, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.65, cor, 2, cv2.LINE_AA
+        )
 
     def _mostrar(self, quadro) -> None:
         """Exibe o quadro no ``Label`` da câmera, ajustado ao espaço disponível."""

@@ -20,7 +20,12 @@ from kara_sygna.visao.caracteristicas import montar_vetor_duas_maos
 from kara_sygna.visao.detector_maos import DetectorMaos, tem_maos
 
 JANELA = "kara-sygna - Reconhecimento"
-COR_NIVEL = {Nivel.NEUTRO: (200, 200, 200), Nivel.OK: (0, 255, 0), Nivel.INCERTO: (0, 165, 255), Nivel.ENSINO: (0, 220, 255)}
+COR_NIVEL = {
+    Nivel.NEUTRO: (200, 200, 200),
+    Nivel.OK: (0, 255, 0),
+    Nivel.INCERTO: (0, 165, 255),
+    Nivel.ENSINO: (0, 220, 255),
+}
 
 
 def main() -> int:
@@ -49,15 +54,31 @@ def main() -> int:
                 quadro = cv2.flip(quadro, 1)
                 resultado = detector.detectar(quadro)
                 detector.desenhar(quadro, resultado)
-                vetor = montar_vetor_duas_maos(resultado) if tem_maos(resultado) else None
+                vetor = (
+                    montar_vetor_duas_maos(resultado) if tem_maos(resultado) else None
+                )
                 resposta = controlador.processar_quadro(vetor)
                 if resposta.sinal_confirmado:
                     frase.append(resposta.sinal_confirmado)
 
-                cv2.putText(quadro, resposta.texto_video or "Nenhuma mao detectada", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, COR_NIVEL[resposta.nivel], 2)
-                cv2.putText(quadro, " ".join(frase[-8:]), (10, quadro.shape[0] - 15),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+                cv2.putText(
+                    quadro,
+                    resposta.texto_video or "Nenhuma mao detectada",
+                    (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.8,
+                    COR_NIVEL[resposta.nivel],
+                    2,
+                )
+                cv2.putText(
+                    quadro,
+                    " ".join(frase[-8:]),
+                    (10, quadro.shape[0] - 15),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (255, 255, 255),
+                    2,
+                )
                 cv2.imshow(JANELA, quadro)
 
                 tecla = cv2.waitKey(1) & 0xFF

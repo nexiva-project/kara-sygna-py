@@ -22,7 +22,7 @@ class ManipuladorFilaLog(logging.Handler):
     def __init__(self) -> None:
         """Cria a fila de linhas e o formato do log."""
         super().__init__()
-        self.fila: "queue.Queue[tuple[str, str]]" = queue.Queue()
+        self.fila: queue.Queue[tuple[str, str]] = queue.Queue()
         self.setFormatter(FormatadorKara())
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -59,7 +59,9 @@ class JanelaLog:
         self._janela.minsize(550, 300)
         self._janela.protocol("WM_DELETE_WINDOW", self.ocultar)
 
-        self._texto = scrolledtext.ScrolledText(self._janela, wrap=tk.WORD, font=tema.FONTE_LOG, state=tk.DISABLED)
+        self._texto = scrolledtext.ScrolledText(
+            self._janela, wrap=tk.WORD, font=tema.FONTE_LOG, state=tk.DISABLED
+        )
         self._texto.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
         for etiqueta, cor in tema.COR_LOG.items():
             self._texto.tag_configure(etiqueta, foreground=cor)

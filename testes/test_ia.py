@@ -8,7 +8,12 @@ from kara_sygna.dados.repositorio import ConjuntoDados
 from kara_sygna.ia import treinamento
 from kara_sygna.ia.aumento import expandir_treino, numero_de_variantes
 from kara_sygna.ia.geometria import matrizes_rotacao
-from kara_sygna.ia.modelo_io import ModeloInvalidoError, carregar_modelo, modelo_esta_atualizado, validar_modelo
+from kara_sygna.ia.modelo_io import (
+    ModeloInvalidoError,
+    carregar_modelo,
+    modelo_esta_atualizado,
+    validar_modelo,
+)
 from kara_sygna.ia.rotacao import ROTACOES, gerar_vetores_rotacionados
 from testes.conftest import vetor_de_duas_maos, vetor_de_uma_mao
 
@@ -67,7 +72,9 @@ def test_numero_de_variantes_respeita_limites():
     assert numero_de_variantes(10_000_000) == config.MIN_VARIANTES_AUMENTO
 
 
-def _dados_sinteticos(rng, rodadas_por_classe=3, por_rodada=12, classes=("a", "b", "c")):
+def _dados_sinteticos(
+    rng, rodadas_por_classe=3, por_rodada=12, classes=("a", "b", "c")
+):
     """Cada classe é uma mão diferente; cada rodada tem um pouco de ruído próprio."""
     X, y, g = [], [], []
     identificador = 0
@@ -92,7 +99,9 @@ def test_treinar_salva_modelo_e_resumo(tmp_path, rng, config_rapida):
     resultado = treinamento.treinar(_dados_sinteticos(rng), caminho)
     assert caminho.exists() and caminho.with_suffix(".json").exists()
     assert resultado.classes == ["a", "b", "c"] and resultado.rodadas == 9
-    assert resultado.acuracia_validacao is not None and resultado.acuracia_validacao > 0.9
+    assert (
+        resultado.acuracia_validacao is not None and resultado.acuracia_validacao > 0.9
+    )
     modelo = carregar_modelo(caminho)
     assert list(modelo.classes_) == ["a", "b", "c"] and modelo.n_jobs == 1
 
@@ -109,9 +118,16 @@ def test_treinar_com_csv_vazio(tmp_path):
         treinamento.treinar(vazio, tmp_path / "m.pkl")
 
 
-def test_com_uma_rodada_por_sinal_pula_a_avaliacao_mas_treina(tmp_path, rng, config_rapida):
-    resultado = treinamento.treinar(_dados_sinteticos(rng, rodadas_por_classe=1), tmp_path / "m.pkl")
-    assert resultado.acuracia_validacao is None and "Avaliação pulada" in resultado.relatorio
+def test_com_uma_rodada_por_sinal_pula_a_avaliacao_mas_treina(
+    tmp_path, rng, config_rapida
+):
+    resultado = treinamento.treinar(
+        _dados_sinteticos(rng, rodadas_por_classe=1), tmp_path / "m.pkl"
+    )
+    assert (
+        resultado.acuracia_validacao is None
+        and "Avaliação pulada" in resultado.relatorio
+    )
     assert (tmp_path / "m.pkl").exists()
 
 
@@ -119,7 +135,9 @@ def test_sinal_com_uma_rodada_fica_fora_so_da_avaliacao(tmp_path, rng, config_ra
     base = _dados_sinteticos(rng, classes=("a", "b"))
     extra = _dados_sinteticos(rng, rodadas_por_classe=1, classes=("z",))
     juntos = ConjuntoDados(
-        np.vstack([base.X, extra.X]), np.concatenate([base.y, extra.y]), np.concatenate([base.grupos, extra.grupos + 1000])
+        np.vstack([base.X, extra.X]),
+        np.concatenate([base.y, extra.y]),
+        np.concatenate([base.grupos, extra.grupos + 1000]),
     )
     resultado = treinamento.treinar(juntos, tmp_path / "m.pkl")
     assert resultado.acuracia_validacao is not None
@@ -129,9 +147,12 @@ def test_sinal_com_uma_rodada_fica_fora_so_da_avaliacao(tmp_path, rng, config_ra
 
 def test_validar_modelo_recusa_incompativeis():
     class SemProba: ...
+
     class OutroTamanho:
         n_features_in_ = 10
+
         def predict_proba(self, X): ...
+
     with pytest.raises(ModeloInvalidoError):
         validar_modelo(SemProba())
     with pytest.raises(ModeloInvalidoError, match="espera 10"):
@@ -140,9 +161,12 @@ def test_validar_modelo_recusa_incompativeis():
 
 def test_modelo_atualizado_compara_datas(tmp_path):
     import os
+
     csv, pkl = tmp_path / "d.csv", tmp_path / "m.pkl"
-    csv.write_text("x"); pkl.write_text("y")
-    os.utime(csv, (100, 100)); os.utime(pkl, (200, 200))
+    csv.write_text("x")
+    pkl.write_text("y")
+    os.utime(csv, (100, 100))
+    os.utime(pkl, (200, 200))
     assert modelo_esta_atualizado(pkl, csv)
     os.utime(csv, (300, 300))
     assert not modelo_esta_atualizado(pkl, csv)

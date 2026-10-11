@@ -13,7 +13,6 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -25,7 +24,9 @@ from kara_sygna.visao.caracteristicas import nomes_features
 logger = logging.getLogger(__name__)
 
 
-def inferir_rodadas(rotulos: np.ndarray, blocos_por_sinal: int = config.RODADAS_MINIMAS_INFERIDAS) -> np.ndarray:
+def inferir_rodadas(
+    rotulos: np.ndarray, blocos_por_sinal: int = config.RODADAS_MINIMAS_INFERIDAS
+) -> np.ndarray:
     """Cria uma coluna de rodadas para um CSV que não tinha.
 
     Cada sinal tem suas linhas (em ordem de gravação) divididas em blocos
@@ -55,10 +56,12 @@ def inferir_rodadas(rotulos: np.ndarray, blocos_por_sinal: int = config.RODADAS_
 
 def _nome_do_backup(caminho: Path) -> Path:
     """Gera ``dados_sinais_backup_AAAAmmdd_HHMMSS.csv`` ao lado do original."""
-    return caminho.with_name(f"{caminho.stem}_backup_{datetime.now():%Y%m%d_%H%M%S}{caminho.suffix}")
+    return caminho.with_name(
+        f"{caminho.stem}_backup_{datetime.now():%Y%m%d_%H%M%S}{caminho.suffix}"
+    )
 
 
-def migrar_csv_legado(caminho: Path) -> Optional[Path]:
+def migrar_csv_legado(caminho: Path) -> Path | None:
     """Acrescenta a coluna ``rodada`` a um CSV antigo.
 
     Args:
@@ -92,7 +95,9 @@ def migrar_csv_legado(caminho: Path) -> Optional[Path]:
     tabela.to_csv(caminho, index=False, encoding="utf-8")
     # Mantém a data original: o modelo continua valendo (os dados não mudaram).
     os.utime(caminho, (stat.st_atime, stat.st_mtime))
-    logger.info("CSV convertido para o formato novo (coluna 'rodada'). Backup: %s", backup.name)
+    logger.info(
+        "CSV convertido para o formato novo (coluna 'rodada'). Backup: %s", backup.name
+    )
     return backup
 
 

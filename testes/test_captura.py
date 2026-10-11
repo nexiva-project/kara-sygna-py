@@ -3,7 +3,12 @@
 import numpy as np
 import pytest
 
-from kara_sygna.camera import Backend, CameraIndisponivelError, abrir_camera, backends_da_plataforma
+from kara_sygna.camera import (
+    Backend,
+    CameraIndisponivelError,
+    abrir_camera,
+    backends_da_plataforma,
+)
 from kara_sygna.camera.captura import _mensagem_de_falha
 
 
@@ -31,19 +36,21 @@ class CapturaFalsa:
 
 def fabrica_de(mapa, chamadas=None):
     """Fábrica que devolve a captura do mapa ``{(indice, codigo): CapturaFalsa}``."""
+
     def fabrica(indice, codigo):
         if chamadas is not None:
             chamadas.append((indice, codigo))
         return mapa.get((indice, codigo), CapturaFalsa(aberta=False))
+
     return fabrica
 
 
 V4L2, AUTO = Backend("V4L2", 200), Backend("auto", 0)
-RAPIDO = dict(tentativas_leitura=3, pausa_s=0)
+RAPIDO = {"tentativas_leitura": 3, "pausa_s": 0}
 
 
 def test_backends_por_sistema():
-    assert [b.nome for b in backends_da_plataforma("Windows")][0] == "DirectShow"
+    assert next(b.nome for b in backends_da_plataforma("Windows")) == "DirectShow"
     assert [b.nome for b in backends_da_plataforma("Linux")] == ["V4L2", "automático"]
     assert "DirectShow" not in [b.nome for b in backends_da_plataforma("Linux")]
     assert backends_da_plataforma("Darwin")[0].nome == "AVFoundation"
@@ -83,6 +90,7 @@ def test_excecao_do_driver_nao_derruba_a_busca():
         if indice == 0:
             raise OSError("driver quebrado")
         return CapturaFalsa()
+
     camera = abrir_camera([0, 1], [V4L2], fabrica=fabrica, **RAPIDO)
     assert camera.indice == 1
 
@@ -94,6 +102,8 @@ def test_dicas_do_linux_so_aparecem_no_linux():
 
 def test_liberar_e_contexto():
     captura = CapturaFalsa()
-    with abrir_camera([0], [V4L2], fabrica=fabrica_de({(0, 200): captura}), **RAPIDO) as camera:
+    with abrir_camera(
+        [0], [V4L2], fabrica=fabrica_de({(0, 200): captura}), **RAPIDO
+    ) as camera:
         assert camera.ler().shape == (480, 640, 3)
     assert captura.liberada

@@ -80,12 +80,17 @@ def test_estabilizador_ignora_ruido_isolado():
 
 def test_estabilizador_reiniciar_esquece_o_travamento():
     e = Estabilizador(janela=4, votos_minimos=2, quadros_para_liberar=8)
-    e.atualizar("a"); assert e.atualizar("a") == "a"
+    e.atualizar("a")
+    assert e.atualizar("a") == "a"
     e.reiniciar()
-    e.atualizar("a"); assert e.atualizar("a") == "a"
+    e.atualizar("a")
+    assert e.atualizar("a") == "a"
 
 
 def test_valores_padrao_vem_da_configuracao():
     e = Estabilizador()
     assert (e.janela, e.votos_minimos, e.quadros_para_liberar) == (
-        config.JANELA_ESTABILIZADOR, config.VOTOS_MINIMOS, config.QUADROS_PARA_LIBERAR)
+        config.JANELA_ESTABILIZADOR,
+        config.VOTOS_MINIMOS,
+        config.QUADROS_PARA_LIBERAR,
+    )

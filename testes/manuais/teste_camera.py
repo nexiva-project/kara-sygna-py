@@ -1,7 +1,7 @@
 """Teste manual 1: a câmera abre e mostra imagem?
 
-    python -m testes.manuais.teste_camera
-    python -m testes.manuais.teste_camera --foto foto.jpg     # sem janela
+python -m testes.manuais.teste_camera
+python -m testes.manuais.teste_camera --foto foto.jpg     # sem janela
 """
 
 import sys

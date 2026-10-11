@@ -5,7 +5,11 @@ import pandas as pd
 import pytest
 
 from kara_sygna.dados import migracao
-from kara_sygna.dados.repositorio import DadosInvalidosError, RepositorioSinais, cabecalho
+from kara_sygna.dados.repositorio import (
+    DadosInvalidosError,
+    RepositorioSinais,
+    cabecalho,
+)
 from kara_sygna.visao.caracteristicas import nomes_features
 from testes.conftest import vetor_de_duas_maos, vetor_de_uma_mao
 
@@ -31,7 +35,11 @@ def test_uma_mao_grava_duas_linhas_e_duas_maos_uma(repositorio, rng):
 def test_carregar_devolve_x_y_e_grupos(repositorio, rng):
     repositorio.anexar_quadro("oi", 7, vetor_de_duas_maos(rng))
     dados = repositorio.carregar()
-    assert dados.X.shape == (1, 126) and dados.y.tolist() == ["oi"] and dados.grupos.tolist() == [7]
+    assert (
+        dados.X.shape == (1, 126)
+        and dados.y.tolist() == ["oi"]
+        and dados.grupos.tolist() == [7]
+    )
     assert dados.classes == ["oi"]
 
 
@@ -56,7 +64,9 @@ def test_exemplos_do_sinal_mantem_a_ordem(repositorio, rng):
 
 
 def _csv_antigo(caminho, rotulos):
-    tabela = pd.DataFrame(np.random.default_rng(0).random((len(rotulos), 126)), columns=nomes_features())
+    tabela = pd.DataFrame(
+        np.random.default_rng(0).random((len(rotulos), 126)), columns=nomes_features()
+    )
     tabela.insert(0, "rotulo", rotulos)
     tabela.to_csv(caminho, index=False)
 
@@ -83,6 +93,7 @@ def test_migracao_acrescenta_rodada_faz_backup_e_preserva_dados(tmp_path):
 
 def test_migracao_nao_mexe_na_data_do_arquivo(tmp_path):
     import os
+
     caminho = tmp_path / "d.csv"
     _csv_antigo(caminho, ["a"] * 10)
     os.utime(caminho, (1_000_000_000, 1_000_000_000))

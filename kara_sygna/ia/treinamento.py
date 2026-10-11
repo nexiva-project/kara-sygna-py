@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -46,7 +46,7 @@ class ResultadoTreino:
     amostras: int
     classes: list[str]
     rodadas: int
-    acuracia_validacao: Optional[float]
+    acuracia_validacao: float | None
     relatorio: str
 
 
@@ -69,7 +69,9 @@ def _ajustar(X: np.ndarray, y: np.ndarray) -> RandomForestClassifier:
     return modelo
 
 
-def avaliar(dados: ConjuntoDados, progresso: Progresso = lambda _m: None) -> tuple[Optional[float], str]:
+def avaliar(
+    dados: ConjuntoDados, progresso: Progresso = lambda _m: None
+) -> tuple[float | None, str]:
     """Validação cruzada por rodada.
 
     Quadros da mesma rodada nunca aparecem no treino e no teste ao mesmo tempo,
@@ -97,12 +99,16 @@ def avaliar(dados: ConjuntoDados, progresso: Progresso = lambda _m: None) -> tup
     X, y, grupos = dados.X[ficam], dados.y[ficam], dados.grupos[ficam]
     dobras = min(config.MAX_DOBRAS_VALIDACAO, min(rodadas[c] for c in avaliaveis))
 
-    validador = StratifiedGroupKFold(n_splits=dobras, shuffle=True, random_state=config.SEMENTE_ALEATORIA)
+    validador = StratifiedGroupKFold(
+        n_splits=dobras, shuffle=True, random_state=config.SEMENTE_ALEATORIA
+    )
     previstos = np.empty(len(y), dtype=object)
     for numero, (idx_treino, idx_teste) in enumerate(validador.split(X, y, grupos), 1):
         progresso(f"Validando {numero}/{dobras}...")
         modelo = _ajustar(X[idx_treino], y[idx_treino])
-        previstos[idx_teste] = modelo.predict(pd.DataFrame(X[idx_teste], columns=nomes_features()))
+        previstos[idx_teste] = modelo.predict(
+            pd.DataFrame(X[idx_teste], columns=nomes_features())
+        )
 
     previstos = previstos.astype(str)
     relatorio = classification_report(y, previstos, zero_division=0)
@@ -151,7 +157,12 @@ def treinar(
 
     resultado = ResultadoTreino(len(dados), classes, rodadas, acuracia, relatorio)
     _salvar_resumo(resultado, Path(caminho_modelo).with_suffix(".json"))
-    logger.info("Treino concluído: %d amostras, %d sinais, acurácia=%s", len(dados), len(classes), acuracia)
+    logger.info(
+        "Treino concluído: %d amostras, %d sinais, acurácia=%s",
+        len(dados),
+        len(classes),
+        acuracia,
+    )
     return resultado
 
 
@@ -161,6 +172,10 @@ def _salvar_resumo(resultado: ResultadoTreino, caminho: Path) -> None:
         "amostras": resultado.amostras,
         "classes": resultado.classes,
         "rodadas": resultado.rodadas,
-        "acuracia_validacao": None if resultado.acuracia_validacao is None else round(resultado.acuracia_validacao, 4),
+        "acuracia_validacao": None
+        if resultado.acuracia_validacao is None
+        else round(resultado.acuracia_validacao, 4),
     }
-    caminho.write_text(json.dumps(resumo, ensure_ascii=False, indent=2), encoding="utf-8")
+    caminho.write_text(
+        json.dumps(resumo, ensure_ascii=False, indent=2), encoding="utf-8"
+    )

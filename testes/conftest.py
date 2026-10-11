@@ -13,7 +13,9 @@ from kara_sygna.visao.caracteristicas import FEATURES_POR_MAO, TOTAL_FEATURES
 def mao_falsa(rng: np.random.Generator, deslocamento: float = 0.0):
     """Landmarks de uma mão aleatória (mesmo formato do MediaPipe)."""
     pontos = rng.random((21, 3)) * 0.2 + np.array([0.4 + deslocamento, 0.4, 0.0])
-    return SimpleNamespace(landmark=[SimpleNamespace(x=x, y=y, z=z) for x, y, z in pontos])
+    return SimpleNamespace(
+        landmark=[SimpleNamespace(x=x, y=y, z=z) for x, y, z in pontos]
+    )
 
 
 def lateralidade(rotulo: str):
@@ -43,7 +45,7 @@ def vetor_de_uma_mao(rng: np.random.Generator, lado: str = "dir") -> np.ndarray:
     inicio = 0 if lado == "esq" else FEATURES_POR_MAO
     mao = rng.normal(0, 1, (21, 3))
     mao[0] = 0
-    vetor[inicio:inicio + FEATURES_POR_MAO] = mao.reshape(-1)
+    vetor[inicio : inicio + FEATURES_POR_MAO] = mao.reshape(-1)
     return vetor
 
 

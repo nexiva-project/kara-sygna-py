@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Self
 
 import cv2
 import numpy as np
@@ -93,17 +93,26 @@ class DetectorMaos:
             pulso = landmarks.landmark[0]
             x = int(pulso.x * largura)
             y = max(25, int(pulso.y * altura) - 20)
-            cv2.putText(quadro_bgr, NOMES_LADO[lado], (x - 25, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, cor, 2, cv2.LINE_AA)
+            cv2.putText(
+                quadro_bgr,
+                NOMES_LADO[lado],
+                (x - 25, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                cor,
+                2,
+                cv2.LINE_AA,
+            )
 
     def fechar(self) -> None:
         """Libera os recursos do MediaPipe. Pode ser chamado mais de uma vez."""
-        hands: Optional[Any] = getattr(self, "_hands", None)
+        hands: Any | None = getattr(self, "_hands", None)
         if hands is not None:
             hands.close()
             self._hands = None
             logger.info("MediaPipe encerrado.")
 
-    def __enter__(self) -> "DetectorMaos":
+    def __enter__(self) -> Self:
         """Entra no bloco ``with`` devolvendo o próprio detector."""
         return self
 

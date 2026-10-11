@@ -53,7 +53,9 @@ class FormatadorKara(logging.Formatter):
 
     def __init__(self) -> None:
         """Define o formato ``HH:MM:SS [CATEGORIA] mensagem``."""
-        super().__init__(fmt="%(asctime)s [%(categoria)s] %(message)s", datefmt="%H:%M:%S")
+        super().__init__(
+            fmt="%(asctime)s [%(categoria)s] %(message)s", datefmt="%H:%M:%S"
+        )
 
     def format(self, record: logging.LogRecord) -> str:
         """Acrescenta a categoria ao registro e devolve o texto formatado."""

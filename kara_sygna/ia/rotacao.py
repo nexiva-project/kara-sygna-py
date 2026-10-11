@@ -14,12 +14,36 @@ from kara_sygna.visao.caracteristicas import FEATURES_POR_MAO, TOTAL_FEATURES
 #: Rotações testadas ``(rx, ry, rz)`` em graus. A primeira é "sem rotação".
 ROTACOES = (
     (0, 0, 0),
-    (15, 0, 0), (-15, 0, 0), (30, 0, 0), (-30, 0, 0), (45, 0, 0), (-45, 0, 0),
-    (0, 15, 0), (0, -15, 0), (0, 30, 0), (0, -30, 0), (0, 45, 0), (0, -45, 0),
-    (0, 0, 15), (0, 0, -15), (0, 0, 30), (0, 0, -30), (0, 0, 45), (0, 0, -45),
-    (20, 20, 0), (20, -20, 0), (-20, 20, 0), (-20, -20, 0),
-    (20, 0, 20), (20, 0, -20), (-20, 0, 20), (-20, 0, -20),
-    (0, 20, 20), (0, 20, -20), (0, -20, 20), (0, -20, -20),
+    (15, 0, 0),
+    (-15, 0, 0),
+    (30, 0, 0),
+    (-30, 0, 0),
+    (45, 0, 0),
+    (-45, 0, 0),
+    (0, 15, 0),
+    (0, -15, 0),
+    (0, 30, 0),
+    (0, -30, 0),
+    (0, 45, 0),
+    (0, -45, 0),
+    (0, 0, 15),
+    (0, 0, -15),
+    (0, 0, 30),
+    (0, 0, -30),
+    (0, 0, 45),
+    (0, 0, -45),
+    (20, 20, 0),
+    (20, -20, 0),
+    (-20, 20, 0),
+    (-20, -20, 0),
+    (20, 0, 20),
+    (20, 0, -20),
+    (-20, 0, 20),
+    (-20, 0, -20),
+    (0, 20, 20),
+    (0, 20, -20),
+    (0, -20, 20),
+    (0, -20, -20),
 )
 
 
@@ -44,6 +68,6 @@ def gerar_vetores_rotacionados(vetor, rotacoes=ROTACOES) -> np.ndarray:
     matrizes = matrizes_rotacao(angulos[:, 0], angulos[:, 1], angulos[:, 2])
     saida = np.empty((len(angulos), TOTAL_FEATURES))
     for inicio in (0, FEATURES_POR_MAO):
-        mao = np.tile(vetor[inicio:inicio + FEATURES_POR_MAO], (len(angulos), 1))
-        saida[:, inicio:inicio + FEATURES_POR_MAO] = rotacionar_mao(mao, matrizes)
+        mao = np.tile(vetor[inicio : inicio + FEATURES_POR_MAO], (len(angulos), 1))
+        saida[:, inicio : inicio + FEATURES_POR_MAO] = rotacionar_mao(mao, matrizes)
     return saida

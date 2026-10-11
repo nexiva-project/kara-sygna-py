@@ -50,11 +50,11 @@ CORES_MAOS_BGR = {"esq": (70, 190, 255), "dir": (150, 105, 255)}
 # ---------------------------------------------------------------------------
 # Reconhecimento
 # ---------------------------------------------------------------------------
-CONFIANCA_MINIMA = 0.70    # probabilidade mínima do melhor sinal
-MARGEM_MINIMA = 0.15       # melhor - segundo melhor (evita empates)
+CONFIANCA_MINIMA = 0.70  # probabilidade mínima do melhor sinal
+MARGEM_MINIMA = 0.15  # melhor - segundo melhor (evita empates)
 JANELA_ESTABILIZADOR = 10  # quadros considerados na votação
-VOTOS_MINIMOS = 6          # votos necessários para confirmar um sinal
-QUADROS_PARA_LIBERAR = 8   # quadros sem o sinal para poder repeti-lo
+VOTOS_MINIMOS = 6  # votos necessários para confirmar um sinal
+QUADROS_PARA_LIBERAR = 8  # quadros sem o sinal para poder repeti-lo
 # Rótulos aprendidos pela IA que NÃO viram texto (ex.: mão relaxada).
 ROTULOS_IGNORADOS = frozenset({"neutro", "nada"})
 # Testa várias inclinações da mão a cada quadro e fica com a mais confiante.

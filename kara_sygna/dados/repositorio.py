@@ -12,15 +12,19 @@ import csv
 import logging
 import os
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
 
 import numpy as np
 import pandas as pd
 
 from kara_sygna import config
-from kara_sygna.visao.caracteristicas import TOTAL_FEATURES, linhas_para_gravar, nomes_features
+from kara_sygna.visao.caracteristicas import (
+    TOTAL_FEATURES,
+    linhas_para_gravar,
+    nomes_features,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +77,7 @@ class RepositorioSinais:
         caminho: Arquivo CSV. Padrão: ``config.ARQUIVO_CSV``.
     """
 
-    def __init__(self, caminho: Optional[Path] = None) -> None:
+    def __init__(self, caminho: Path | None = None) -> None:
         """Define qual arquivo CSV será usado (veja a classe para o argumento)."""
         self.caminho = Path(caminho) if caminho is not None else config.ARQUIVO_CSV
 
@@ -114,13 +118,17 @@ class RepositorioSinais:
         """
         vetor = np.asarray(list(vetor), dtype=np.float64)
         if vetor.size != TOTAL_FEATURES:
-            raise ValueError(f"O vetor tem {vetor.size} valores; esperava {TOTAL_FEATURES}.")
+            raise ValueError(
+                f"O vetor tem {vetor.size} valores; esperava {TOTAL_FEATURES}."
+            )
 
         linhas = linhas_para_gravar(vetor)
         with open(self.caminho, "a", newline="", encoding="utf-8") as arquivo:
             escritor = csv.writer(arquivo)
             for linha in linhas:
-                escritor.writerow([rotulo, rodada] + [round(float(x), 6) for x in linha])
+                escritor.writerow(
+                    [rotulo, rodada] + [round(float(x), 6) for x in linha]
+                )
         return len(linhas)
 
     def apagar_sinal(self, rotulo: str) -> int:
@@ -159,7 +167,9 @@ class RepositorioSinais:
                 "Abra o programa de novo: ele converte o arquivo automaticamente."
             )
         if tabela[cabecalho()].isnull().any().any():
-            raise DadosInvalidosError("O CSV contém valores vazios. Corrija ou apague as linhas incompletas.")
+            raise DadosInvalidosError(
+                "O CSV contém valores vazios. Corrija ou apague as linhas incompletas."
+            )
         return tabela
 
     def carregar(self) -> ConjuntoDados:

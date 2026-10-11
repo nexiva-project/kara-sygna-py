@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import queue
 import threading
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class ExecutorTk:
     def __init__(self, widget: Any) -> None:
         """Guarda o widget usado para agendar a leitura da fila."""
         self._widget = widget
-        self._fila: "queue.Queue[tuple[str, Any]]" = queue.Queue()
+        self._fila: queue.Queue[tuple[str, Any]] = queue.Queue()
         self._ativo = False
 
     @property
@@ -38,7 +39,7 @@ class ExecutorTk:
         trabalho: Callable[[Callable[[str], None]], Any],
         ao_concluir: Callable[[Any], None],
         ao_falhar: Callable[[BaseException], None],
-        ao_progresso: Optional[Callable[[str], None]] = None,
+        ao_progresso: Callable[[str], None] | None = None,
     ) -> None:
         """Inicia a tarefa.
 
@@ -85,6 +86,12 @@ class ExecutorTk:
             pass
         if not terminou:
             try:
-                self._widget.after(INTERVALO_VERIFICACAO_MS, self._verificar, ao_concluir, ao_falhar, ao_progresso)
+                self._widget.after(
+                    INTERVALO_VERIFICACAO_MS,
+                    self._verificar,
+                    ao_concluir,
+                    ao_falhar,
+                    ao_progresso,
+                )
             except Exception:  # noqa: BLE001 - janela já foi destruída
                 self._ativo = False

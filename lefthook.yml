@@ -4,7 +4,7 @@ pre-commit:
   commands:
     linter:
       glob: "*.py"
-      run: ruff check {staged_files} --fix --unsafe-fixes
+      run: ruff check {staged_files}
       stage_fixed: true
     formatter:
       glob: "*.py"

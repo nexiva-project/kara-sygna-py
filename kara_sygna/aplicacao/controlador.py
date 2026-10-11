@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import enum
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 import numpy as np
 
@@ -22,9 +23,17 @@ from kara_sygna.aplicacao.erros import (
     SemDadosError,
 )
 from kara_sygna.aplicacao.previsualizacao import Reproducao, combinar_espelhos
-from kara_sygna.dados.repositorio import RepositorioSinais, novo_id_rodada, remover_arquivo_se_existir
+from kara_sygna.dados.repositorio import (
+    RepositorioSinais,
+    novo_id_rodada,
+    remover_arquivo_se_existir,
+)
 from kara_sygna.ia import treinamento
-from kara_sygna.ia.modelo_io import carregar_modelo, classes_do_modelo, modelo_esta_atualizado
+from kara_sygna.ia.modelo_io import (
+    carregar_modelo,
+    classes_do_modelo,
+    modelo_esta_atualizado,
+)
 from kara_sygna.ia.reconhecimento import Estabilizador, prever
 from kara_sygna.ia.rotacao import ROTACOES
 
@@ -62,8 +71,8 @@ class ResultadoQuadro:
 
     texto_video: str = ""
     nivel: Nivel = Nivel.NEUTRO
-    status: Optional[str] = None
-    sinal_confirmado: Optional[str] = None
+    status: str | None = None
+    sinal_confirmado: str | None = None
 
 
 @dataclass(frozen=True)
@@ -86,7 +95,7 @@ class ControladorSinais:
 
     def __init__(
         self,
-        repositorio: Optional[RepositorioSinais] = None,
+        repositorio: RepositorioSinais | None = None,
         caminho_modelo: Path = config.ARQUIVO_MODELO,
         carregador_modelo: Callable[[Path], Any] = carregar_modelo,
     ) -> None:
@@ -143,7 +152,9 @@ class ControladorSinais:
 
     # -- treinamento -------------------------------------------------------------
 
-    def treinar(self, progresso: Callable[[str], None] = lambda _m: None) -> treinamento.ResultadoTreino:
+    def treinar(
+        self, progresso: Callable[[str], None] = lambda _m: None
+    ) -> treinamento.ResultadoTreino:
         """Treina a IA com o CSV atual (demora; chame em segundo plano).
 
         Raises:
@@ -176,12 +187,16 @@ class ControladorSinais:
         if not self.caminho_modelo.exists():
             raise ModeloAusenteError("Ensine sinais e clique em TREINAR IA primeiro.")
         if not modelo_esta_atualizado(self.caminho_modelo, self.repositorio.caminho):
-            raise ModeloDesatualizadoError("Os sinais mudaram.\n\nClique em TREINAR IA antes de reconhecer.")
+            raise ModeloDesatualizadoError(
+                "Os sinais mudaram.\n\nClique em TREINAR IA antes de reconhecer."
+            )
 
         self._modelo = self._carregador_modelo(self.caminho_modelo)
         self.estabilizador.reiniciar()
         self.modo = Modo.RECONHECENDO
-        logger.info("Reconhecimento iniciado. Sinais do modelo: %s", list(self._modelo.classes_))
+        logger.info(
+            "Reconhecimento iniciado. Sinais do modelo: %s", list(self._modelo.classes_)
+        )
         return "Reconhecendo sinais ao vivo..."
 
     def limpar_reconhecimento(self) -> None:
@@ -190,7 +205,7 @@ class ControladorSinais:
 
     # -- quadro a quadro -----------------------------------------------------------
 
-    def processar_quadro(self, vetor: Optional[np.ndarray]) -> ResultadoQuadro:
+    def processar_quadro(self, vetor: np.ndarray | None) -> ResultadoQuadro:
         """Trata um quadro da câmera de acordo com o modo atual.
 
         Args:
@@ -205,18 +220,20 @@ class ControladorSinais:
             return self._quadro_de_reconhecimento(vetor)
         return ResultadoQuadro()
 
-    def _quadro_de_ensino(self, vetor: Optional[np.ndarray]) -> ResultadoQuadro:
+    def _quadro_de_ensino(self, vetor: np.ndarray | None) -> ResultadoQuadro:
         """Grava o quadro, se houver mão."""
         if vetor is None:
             return ResultadoQuadro()
-        self.total_gravado += self.repositorio.anexar_quadro(self.rotulo_atual, self._rodada, vetor)
+        self.total_gravado += self.repositorio.anexar_quadro(
+            self.rotulo_atual, self._rodada, vetor
+        )
         return ResultadoQuadro(
             texto_video=f"ENSINANDO: {self.rotulo_atual} ({self.total_gravado})",
             nivel=Nivel.ENSINO,
             status=f"Ensinando “{self.rotulo_atual}”: {self.total_gravado} exemplos.",
         )
 
-    def _quadro_de_reconhecimento(self, vetor: Optional[np.ndarray]) -> ResultadoQuadro:
+    def _quadro_de_reconhecimento(self, vetor: np.ndarray | None) -> ResultadoQuadro:
         """Prevê o sinal e atualiza a votação."""
         if vetor is None:
             self.estabilizador.atualizar(None)
@@ -224,19 +241,28 @@ class ControladorSinais:
 
         rotacoes = ROTACOES if config.CORRECAO_ROTACAO_ATIVA else None
         predicao = prever(self._modelo, vetor, rotacoes)
-        confirmado = self.estabilizador.atualizar(predicao.sinal if predicao.aceito else None)
+        confirmado = self.estabilizador.atualizar(
+            predicao.sinal if predicao.aceito else None
+        )
         if confirmado in config.ROTULOS_IGNORADOS:
             confirmado = None
 
         if not predicao.aceito:
-            return ResultadoQuadro(f"INCERTO ({predicao.confianca:.0%})", Nivel.INCERTO, sinal_confirmado=confirmado)
+            return ResultadoQuadro(
+                f"INCERTO ({predicao.confianca:.0%})",
+                Nivel.INCERTO,
+                sinal_confirmado=confirmado,
+            )
 
         texto = f"SINAL: {predicao.sinal} ({predicao.confianca:.0%})"
         if any(predicao.rotacao):
             rx, ry, rz = predicao.rotacao
             texto += f" [ajuste {rx:+d},{ry:+d},{rz:+d} graus]"
         return ResultadoQuadro(
-            texto, Nivel.OK, f"Sinal reconhecido: {predicao.sinal} ({predicao.confianca:.0%})", confirmado
+            texto,
+            Nivel.OK,
+            f"Sinal reconhecido: {predicao.sinal} ({predicao.confianca:.0%})",
+            confirmado,
         )
 
     # -- lista de sinais -----------------------------------------------------------
@@ -246,9 +272,14 @@ class ControladorSinais:
         contagem = self.repositorio.contagem_por_sinal()
         if not contagem:
             return []
-        atualizado = modelo_esta_atualizado(self.caminho_modelo, self.repositorio.caminho)
+        atualizado = modelo_esta_atualizado(
+            self.caminho_modelo, self.repositorio.caminho
+        )
         conhecidos = classes_do_modelo(self.caminho_modelo) if atualizado else set()
-        return [InfoSinal(palavra, qtd, palavra in conhecidos) for palavra, qtd in contagem.items()]
+        return [
+            InfoSinal(palavra, qtd, palavra in conhecidos)
+            for palavra, qtd in contagem.items()
+        ]
 
     def apagar_sinal(self, palavra: str) -> str:
         """Apaga um sinal e o modelo (que ficou desatualizado).

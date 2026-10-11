@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 
 from kara_sygna.visao import caracteristicas as c
-from testes.conftest import mao_falsa, resultado_falso, vetor_de_duas_maos, vetor_de_uma_mao
+from testes.conftest import (
+    mao_falsa,
+    resultado_falso,
+    vetor_de_duas_maos,
+    vetor_de_uma_mao,
+)
 
 
 def test_nomes_tem_126_colunas_unicas():
@@ -23,7 +28,7 @@ def test_uma_mao_vai_para_o_slot_da_lateralidade_invertida(rng, rotulo, slot):
     vetor = c.montar_vetor_duas_maos(resultado_falso((mao_falsa(rng), rotulo)))
     esquerda, direita = c.dividir_maos(vetor)
     assert c.quantidade_de_maos(vetor) == 1
-    assert (not c.eh_vetor_zerado(esquerda if slot == "esq" else direita))
+    assert not c.eh_vetor_zerado(esquerda if slot == "esq" else direita)
 
 
 def test_duas_maos_usam_a_posicao_horizontal_mesmo_com_rotulos_iguais(rng):
@@ -35,7 +40,12 @@ def test_duas_maos_usam_a_posicao_horizontal_mesmo_com_rotulos_iguais(rng):
 
 def test_vetor_nao_depende_de_posicao_nem_de_tamanho(rng):
     base = mao_falsa(rng)
-    movida = type(base)(landmark=[type(p)(x=p.x * 0.5 + 0.2, y=p.y * 0.5 + 0.1, z=p.z * 0.5) for p in base.landmark])
+    movida = type(base)(
+        landmark=[
+            type(p)(x=p.x * 0.5 + 0.2, y=p.y * 0.5 + 0.1, z=p.z * 0.5)
+            for p in base.landmark
+        ]
+    )
     a = c.montar_vetor_duas_maos(resultado_falso((base, "Right")))
     b = c.montar_vetor_duas_maos(resultado_falso((movida, "Right")))
     assert np.allclose(a, b, atol=1e-9)
@@ -78,4 +88,6 @@ def test_linhas_para_gravar_espelha_so_sinais_de_uma_mao(rng):
     linhas = c.linhas_para_gravar(vetor_de_uma_mao(rng, "dir"))
     assert len(linhas) == 2
     assert c.quantidade_de_maos(linhas[1]) == 1
-    assert not c.eh_vetor_zerado(linhas[1][c.IDX_ESQ]) and c.eh_vetor_zerado(linhas[1][c.IDX_DIR])
+    assert not c.eh_vetor_zerado(linhas[1][c.IDX_ESQ]) and c.eh_vetor_zerado(
+        linhas[1][c.IDX_DIR]
+    )

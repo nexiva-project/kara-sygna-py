@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import messagebox
-from typing import Callable
 
 from kara_sygna.aplicacao.controlador import InfoSinal
 from kara_sygna.interface import tema
@@ -39,21 +39,36 @@ class JanelaSinais(tk.Toplevel):
 
         conteudo = tk.Frame(self, padx=15, pady=15)
         conteudo.pack(fill="both", expand=True)
-        tk.Label(conteudo, text="Sinais que a IA conhece", font=("Arial", 13, "bold")).pack(anchor="w")
-        tk.Label(conteudo, text="✓ treinado   |   • precisa treinar IA", fg="#666666").pack(anchor="w", pady=(3, 10))
+        tk.Label(
+            conteudo, text="Sinais que a IA conhece", font=("Arial", 13, "bold")
+        ).pack(anchor="w")
+        tk.Label(
+            conteudo, text="✓ treinado   |   • precisa treinar IA", fg="#666666"
+        ).pack(anchor="w", pady=(3, 10))
 
         area = tk.Frame(conteudo)
         area.pack(fill="both", expand=True)
-        self._lista = tk.Listbox(area, height=15, font=("Arial", 11), exportselection=False)
+        self._lista = tk.Listbox(
+            area, height=15, font=("Arial", 11), exportselection=False
+        )
         self._lista.pack(side="left", fill="both", expand=True)
         self._lista.bind("<Double-Button-1>", lambda _e: self._ver())
         barra = tk.Scrollbar(area, command=self._lista.yview)
         barra.pack(side="right", fill="y")
         self._lista.config(yscrollcommand=barra.set)
 
-        tk.Button(conteudo, text="ATUALIZAR LISTA", command=self.atualizar).pack(fill="x", pady=(10, 0))
-        tk.Button(conteudo, text="VER SINAL (SÓ AS MÃOS)", command=self._ver).pack(fill="x", pady=(7, 0))
-        tk.Button(conteudo, text="APAGAR SINAL SELECIONADO", command=self._apagar, fg=tema.PERIGO).pack(fill="x", pady=(7, 0))
+        tk.Button(conteudo, text="ATUALIZAR LISTA", command=self.atualizar).pack(
+            fill="x", pady=(10, 0)
+        )
+        tk.Button(conteudo, text="VER SINAL (SÓ AS MÃOS)", command=self._ver).pack(
+            fill="x", pady=(7, 0)
+        )
+        tk.Button(
+            conteudo,
+            text="APAGAR SINAL SELECIONADO",
+            command=self._apagar,
+            fg=tema.PERIGO,
+        ).pack(fill="x", pady=(7, 0))
         self.atualizar()
 
     def atualizar(self) -> None:
@@ -63,21 +78,29 @@ class JanelaSinais(tk.Toplevel):
         try:
             sinais = self._obter_sinais()
         except Exception as erro:  # noqa: BLE001 - mostra o problema em vez de travar a janela
-            messagebox.showerror("Sinais", f"Não foi possível ler os sinais:\n{erro}", parent=self)
+            messagebox.showerror(
+                "Sinais", f"Não foi possível ler os sinais:\n{erro}", parent=self
+            )
             return
         if not sinais:
             self._lista.insert(tk.END, "Nenhum sinal ensinado ainda.")
             return
         for sinal in sinais:
             estado = "✓ treinado" if sinal.treinado else "• precisa treinar"
-            self._lista.insert(tk.END, f"{sinal.palavra} — {sinal.exemplos} exemplos — {estado}")
+            self._lista.insert(
+                tk.END, f"{sinal.palavra} — {sinal.exemplos} exemplos — {estado}"
+            )
             self._palavras.append(sinal.palavra)
 
     def _selecionada(self, acao: str) -> str | None:
         """Palavra selecionada, ou ``None`` (avisando o usuário) se não houver."""
         selecao = self._lista.curselection()
         if not selecao or not self._palavras:
-            messagebox.showwarning("Selecione um sinal", f"Selecione na lista o sinal que deseja {acao}.", parent=self)
+            messagebox.showwarning(
+                "Selecione um sinal",
+                f"Selecione na lista o sinal que deseja {acao}.",
+                parent=self,
+            )
             return None
         return self._palavras[selecao[0]]
 

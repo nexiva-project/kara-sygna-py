@@ -40,9 +40,11 @@ def executar() -> int:
 
     try:
         detector = DetectorMaos()
-    except Exception as erro:  # noqa: BLE001
+    except Exception as erro:
         logger.error("Falha ao iniciar o MediaPipe", exc_info=erro)
-        messagebox.showerror("MediaPipe", f"Não foi possível iniciar o MediaPipe:\n\n{erro}")
+        messagebox.showerror(
+            "MediaPipe", f"Não foi possível iniciar o MediaPipe:\n\n{erro}"
+        )
         return 1
 
     try:

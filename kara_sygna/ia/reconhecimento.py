@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections import Counter, deque
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -42,7 +43,7 @@ def _preparar_entrada(modelo: Any, matriz: np.ndarray):
 def prever(
     modelo: Any,
     vetor: Sequence[float],
-    rotacoes: Optional[Sequence[tuple[int, int, int]]] = ROTACOES,
+    rotacoes: Sequence[tuple[int, int, int]] | None = ROTACOES,
 ) -> Predicao:
     """Prevê o sinal de um quadro, testando várias inclinações da mão.
 
@@ -67,7 +68,13 @@ def prever(
     segundo = float(p[ordem[1]]) if len(p) > 1 else 0.0
     margem = confianca - segundo
     aceito = confianca >= config.CONFIANCA_MINIMA and margem >= config.MARGEM_MINIMA
-    return Predicao(str(modelo.classes_[ordem[0]]), confianca, margem, aceito, tuple(int(a) for a in rotacoes[linha]))
+    return Predicao(
+        str(modelo.classes_[ordem[0]]),
+        confianca,
+        margem,
+        aceito,
+        tuple(int(a) for a in rotacoes[linha]),
+    )
 
 
 class Estabilizador:
@@ -94,10 +101,10 @@ class Estabilizador:
     def reiniciar(self) -> None:
         """Esquece todo o histórico (use ao começar ou ao limpar o texto)."""
         self._historico: deque = deque(maxlen=self.janela)
-        self._travado: Optional[str] = None
+        self._travado: str | None = None
         self._quadros_sem_travado = 0
 
-    def atualizar(self, sinal: Optional[str]) -> Optional[str]:
+    def atualizar(self, sinal: str | None) -> str | None:
         """Registra o resultado de um quadro.
 
         Args:
@@ -109,7 +116,9 @@ class Estabilizador:
         self._historico.append(sinal)
 
         if self._travado is not None:
-            self._quadros_sem_travado = 0 if sinal == self._travado else self._quadros_sem_travado + 1
+            self._quadros_sem_travado = (
+                0 if sinal == self._travado else self._quadros_sem_travado + 1
+            )
             if self._quadros_sem_travado >= self.quadros_para_liberar:
                 self._travado = None
 

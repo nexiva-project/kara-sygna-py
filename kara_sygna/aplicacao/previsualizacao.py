@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
-from kara_sygna.visao.caracteristicas import FEATURES_POR_MAO, eh_vetor_zerado, quantidade_de_maos
+from kara_sygna.visao.caracteristicas import (
+    FEATURES_POR_MAO,
+    eh_vetor_zerado,
+    quantidade_de_maos,
+)
 
 PASSO_GIRO_RADIANOS = 0.009
 
@@ -31,13 +35,21 @@ def combinar_espelhos(vetores: Sequence[Sequence[float]]) -> list[np.ndarray]:
     while i < len(linhas):
         atual = linhas[i]
         proximo = linhas[i + 1] if i + 1 < len(linhas) else None
-        if proximo is not None and quantidade_de_maos(atual) == 1 and quantidade_de_maos(proximo) == 1:
+        if (
+            proximo is not None
+            and quantidade_de_maos(atual) == 1
+            and quantidade_de_maos(proximo) == 1
+        ):
             atual_tem_esq = not eh_vetor_zerado(atual[:FEATURES_POR_MAO])
             proximo_tem_esq = not eh_vetor_zerado(proximo[:FEATURES_POR_MAO])
             if atual_tem_esq != proximo_tem_esq:
                 esquerda = atual if atual_tem_esq else proximo
                 direita = proximo if atual_tem_esq else atual
-                resultado.append(np.concatenate([esquerda[:FEATURES_POR_MAO], direita[FEATURES_POR_MAO:]]))
+                resultado.append(
+                    np.concatenate(
+                        [esquerda[:FEATURES_POR_MAO], direita[FEATURES_POR_MAO:]]
+                    )
+                )
                 i += 2
                 continue
         resultado.append(atual)

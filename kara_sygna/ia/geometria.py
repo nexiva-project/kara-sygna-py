@@ -18,9 +18,19 @@ def matrizes_rotacao(rx_graus, ry_graus, rz_graus) -> np.ndarray:
     Returns:
         Array (n, 3, 3), uma matriz por ângulo.
     """
-    rx, ry, rz = (np.atleast_1d(np.radians(np.asarray(a, dtype=np.float64))) for a in (rx_graus, ry_graus, rz_graus))
+    rx, ry, rz = (
+        np.atleast_1d(np.radians(np.asarray(a, dtype=np.float64)))
+        for a in (rx_graus, ry_graus, rz_graus)
+    )
     n = len(rx)
-    cx, sx, cy, sy, cz, sz = np.cos(rx), np.sin(rx), np.cos(ry), np.sin(ry), np.cos(rz), np.sin(rz)
+    cx, sx, cy, sy, cz, sz = (
+        np.cos(rx),
+        np.sin(rx),
+        np.cos(ry),
+        np.sin(ry),
+        np.cos(rz),
+        np.sin(rz),
+    )
 
     mx, my, mz = np.zeros((n, 3, 3)), np.zeros((n, 3, 3)), np.zeros((n, 3, 3))
     mx[:, 0, 0] = 1

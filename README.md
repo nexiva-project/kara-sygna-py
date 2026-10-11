@@ -15,11 +15,18 @@ pip uninstall -y opencv-python opencv-python-headless   # só se já instalou an
 pip install -r requirements.txt
 ```
 **Windows (PowerShell)**
-```powershell
+```bash
 py -3.12 -m venv .venv ; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 No PyCharm: *Settings → Project → Python Interpreter* e aponte para a `.venv`.
+
+**Instalar Lefthook e Ruff**
+```bash
+python -m pip install lefthook
+lefthook install
+pip install ruff
+```
 
 ## Como usar
 

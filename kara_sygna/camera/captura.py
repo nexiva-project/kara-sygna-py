@@ -13,8 +13,9 @@ from __future__ import annotations
 import logging
 import platform
 import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
-from typing import Callable, Iterable, Optional, Sequence
+from typing import Self
 
 import cv2
 import numpy as np
@@ -44,7 +45,7 @@ class Backend:
     codigo: int
 
 
-def backends_da_plataforma(sistema: Optional[str] = None) -> list[Backend]:
+def backends_da_plataforma(sistema: str | None = None) -> list[Backend]:
     """Lista os backends de câmera adequados ao sistema operacional.
 
     Args:
@@ -58,7 +59,11 @@ def backends_da_plataforma(sistema: Optional[str] = None) -> list[Backend]:
     sistema = sistema or platform.system()
     automatico = Backend("automático", cv2.CAP_ANY)
     if sistema == "Windows":
-        return [Backend("DirectShow", cv2.CAP_DSHOW), Backend("MediaFoundation", cv2.CAP_MSMF), automatico]
+        return [
+            Backend("DirectShow", cv2.CAP_DSHOW),
+            Backend("MediaFoundation", cv2.CAP_MSMF),
+            automatico,
+        ]
     if sistema == "Linux":
         return [Backend("V4L2", cv2.CAP_V4L2), automatico]
     if sistema == "Darwin":
@@ -73,7 +78,14 @@ class Camera:
     câmera automaticamente ao sair do bloco.
     """
 
-    def __init__(self, captura: "cv2.VideoCapture", indice: int, backend: Backend, largura: int, altura: int) -> None:
+    def __init__(
+        self,
+        captura: cv2.VideoCapture,
+        indice: int,
+        backend: Backend,
+        largura: int,
+        altura: int,
+    ) -> None:
         """Cria o invólucro.
 
         Args:
@@ -94,7 +106,7 @@ class Camera:
         """Texto curto como ``"câmera 0 via V4L2 (640x480)"``."""
         return f"câmera {self.indice} via {self.backend.nome} ({self.largura}x{self.altura})"
 
-    def ler(self) -> Optional[np.ndarray]:
+    def ler(self) -> np.ndarray | None:
         """Lê o próximo quadro.
 
         Returns:
@@ -113,7 +125,7 @@ class Camera:
         """Libera a câmera. Pode ser chamado mais de uma vez."""
         self._captura.release()
 
-    def __enter__(self) -> "Camera":
+    def __enter__(self) -> Self:
         """Entra no bloco ``with`` devolvendo a própria câmera."""
         return self
 
@@ -122,19 +134,23 @@ class Camera:
         self.liberar()
 
 
-def _fabrica_padrao(indice: int, codigo_backend: int) -> "cv2.VideoCapture":
+def _fabrica_padrao(indice: int, codigo_backend: int) -> cv2.VideoCapture:
     """Cria uma ``cv2.VideoCapture`` real (a fábrica usada fora dos testes)."""
     return cv2.VideoCapture(indice, codigo_backend)
 
 
-def _aplicar_resolucao(captura: "cv2.VideoCapture", largura: Optional[int], altura: Optional[int]) -> None:
+def _aplicar_resolucao(
+    captura: cv2.VideoCapture, largura: int | None, altura: int | None
+) -> None:
     """Pede à câmera a resolução desejada (o driver pode escolher outra)."""
     if largura and altura:
         captura.set(cv2.CAP_PROP_FRAME_WIDTH, largura)
         captura.set(cv2.CAP_PROP_FRAME_HEIGHT, altura)
 
 
-def _ler_com_tentativas(captura: "cv2.VideoCapture", tentativas: int, pausa_s: float) -> Optional[np.ndarray]:
+def _ler_com_tentativas(
+    captura: cv2.VideoCapture, tentativas: int, pausa_s: float
+) -> np.ndarray | None:
     """Tenta ler um quadro algumas vezes.
 
     Em muitas câmeras Linux os primeiros quadros chegam vazios enquanto o
@@ -152,12 +168,12 @@ def _tentar_abrir(
     fabrica: FabricaCaptura,
     indice: int,
     backend: Backend,
-    largura: Optional[int],
-    altura: Optional[int],
+    largura: int | None,
+    altura: int | None,
     tentativas_leitura: int,
     pausa_s: float,
     falhas: list[str],
-) -> Optional[Camera]:
+) -> Camera | None:
     """Tenta abrir uma combinação (backend, índice).
 
     Args:
@@ -198,7 +214,10 @@ def _tentar_abrir(
 
 def _mensagem_de_falha(falhas: Sequence[str], sistema: str) -> str:
     """Monta a mensagem de erro final, com dicas específicas do sistema."""
-    detalhes = "\n".join(f"  - {linha}" for linha in falhas[:12]) or "  (nenhuma tentativa foi feita)"
+    detalhes = (
+        "\n".join(f"  - {linha}" for linha in falhas[:12])
+        or "  (nenhuma tentativa foi feita)"
+    )
     dica_linux = (
         "\nNo Linux, confira:\n"
         "  - 'ls /dev/video*' mostra algum dispositivo?\n"
@@ -217,11 +236,11 @@ def _mensagem_de_falha(falhas: Sequence[str], sistema: str) -> str:
 
 
 def abrir_camera(
-    indices: Optional[Iterable[int]] = None,
-    backends: Optional[Sequence[Backend]] = None,
-    largura: Optional[int] = config.LARGURA_CAPTURA,
-    altura: Optional[int] = config.ALTURA_CAPTURA,
-    fabrica: Optional[FabricaCaptura] = None,
+    indices: Iterable[int] | None = None,
+    backends: Sequence[Backend] | None = None,
+    largura: int | None = config.LARGURA_CAPTURA,
+    altura: int | None = config.ALTURA_CAPTURA,
+    fabrica: FabricaCaptura | None = None,
     tentativas_leitura: int = config.LEITURAS_DE_TESTE,
     pausa_s: float = config.PAUSA_ENTRE_LEITURAS_S,
 ) -> Camera:
@@ -253,7 +272,16 @@ def abrir_camera(
 
     for backend in backends:
         for indice in indices:
-            camera = _tentar_abrir(fabrica, indice, backend, largura, altura, tentativas_leitura, pausa_s, falhas)
+            camera = _tentar_abrir(
+                fabrica,
+                indice,
+                backend,
+                largura,
+                altura,
+                tentativas_leitura,
+                pausa_s,
+                falhas,
+            )
             if camera is not None:
                 logger.info("Câmera conectada: %s", camera.descricao)
                 return camera

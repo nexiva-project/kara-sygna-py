@@ -14,7 +14,7 @@ idênticos, então o CSV e o modelo já treinados continuam válidos.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -95,12 +95,13 @@ def quantidade_de_maos(vetor: Any) -> int:
 # Conversão do resultado do MediaPipe
 # ---------------------------------------------------------------------------
 
+
 def _pontos_da_mao(landmarks: Any) -> np.ndarray:
     """Converte os landmarks de uma mão em uma matriz (21, 3) de x, y, z."""
     return np.array([[p.x, p.y, p.z] for p in landmarks.landmark], dtype=np.float64)
 
 
-def _normalizar_mao(pontos: Any) -> Optional[np.ndarray]:
+def _normalizar_mao(pontos: Any) -> np.ndarray | None:
     """Centra a mão no pulso e divide pelo tamanho médio da palma.
 
     Args:
@@ -119,13 +120,15 @@ def _normalizar_mao(pontos: Any) -> Optional[np.ndarray]:
 
     relativos = pontos - pontos[0]
     norma = np.linalg.norm
-    escala = np.mean([
-        norma(relativos[5]),
-        norma(relativos[9]),
-        norma(relativos[13]),
-        norma(relativos[17]),
-        norma(relativos[5] - relativos[17]),
-    ])
+    escala = np.mean(
+        [
+            norma(relativos[5]),
+            norma(relativos[9]),
+            norma(relativos[13]),
+            norma(relativos[17]),
+            norma(relativos[5] - relativos[17]),
+        ]
+    )
     if not np.isfinite(escala) or escala < 1e-6:
         return None
 
@@ -135,7 +138,7 @@ def _normalizar_mao(pontos: Any) -> Optional[np.ndarray]:
     return normalizados
 
 
-def _rotulo_da_mao(lateralidades: list, indice: int) -> Optional[str]:
+def _rotulo_da_mao(lateralidades: list, indice: int) -> str | None:
     """Lê o rótulo ``"Left"``/``"Right"`` da mão ``indice`` (ou ``None``)."""
     if indice >= len(lateralidades):
         return None
@@ -143,20 +146,23 @@ def _rotulo_da_mao(lateralidades: list, indice: int) -> Optional[str]:
     return classificacoes[0].label if classificacoes else None
 
 
-def _separar_maos(resultado: Any) -> dict[str, Optional[np.ndarray]]:
+def _separar_maos(resultado: Any) -> dict[str, np.ndarray | None]:
     """Distribui as mãos detectadas nos "slots" esquerda e direita.
 
     Com uma mão, vale a lateralidade informada pelo MediaPipe. Com duas, vale a
     posição horizontal, para que uma mão nunca sobrescreva a outra se os dois
     rótulos vierem iguais.
     """
-    slots: dict[str, Optional[np.ndarray]] = {"esq": None, "dir": None}
+    slots: dict[str, np.ndarray | None] = {"esq": None, "dir": None}
     listas = getattr(resultado, "multi_hand_landmarks", None) or []
     if not listas:
         return slots
     lateralidades = getattr(resultado, "multi_handedness", None) or []
 
-    maos = [(_rotulo_da_mao(lateralidades, i), _pontos_da_mao(lm)) for i, lm in enumerate(listas)]
+    maos = [
+        (_rotulo_da_mao(lateralidades, i), _pontos_da_mao(lm))
+        for i, lm in enumerate(listas)
+    ]
 
     if len(maos) == 1:
         rotulo, pontos = maos[0]
@@ -197,6 +203,7 @@ def montar_vetor_duas_maos(resultado: Any) -> np.ndarray:
 # Espelhamento
 # ---------------------------------------------------------------------------
 
+
 def espelhar_mao(vetor: Any) -> list[float]:
     """Espelha uma mão (63 valores) no eixo X.
 
@@ -208,7 +215,9 @@ def espelhar_mao(vetor: Any) -> list[float]:
     """
     pontos = np.asarray(vetor, dtype=np.float64).reshape(-1)
     if pontos.size != FEATURES_POR_MAO:
-        raise ValueError(f"Esperados {FEATURES_POR_MAO} valores para uma mão; recebidos {pontos.size}.")
+        raise ValueError(
+            f"Esperados {FEATURES_POR_MAO} valores para uma mão; recebidos {pontos.size}."
+        )
     pontos = pontos.reshape(TOTAL_LANDMARKS_MAO, FEATURES_POR_LANDMARK).copy()
     pontos[:, 0] *= -1.0
     return pontos.reshape(-1).tolist()
@@ -226,7 +235,9 @@ def espelhar_features(vetor: Any) -> np.ndarray:
     """
     v = np.asarray(vetor, dtype=np.float64)
     if v.shape[-1] != TOTAL_FEATURES:
-        raise ValueError(f"O último eixo deve ter {TOTAL_FEATURES} valores; recebidos {v.shape[-1]}.")
+        raise ValueError(
+            f"O último eixo deve ter {TOTAL_FEATURES} valores; recebidos {v.shape[-1]}."
+        )
 
     saida = v.copy()
     esquerda = v[..., IDX_ESQ].reshape(-1, FEATURES_POR_MAO)

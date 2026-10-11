@@ -8,20 +8,39 @@ janela nenhuma.
 from __future__ import annotations
 
 import math
-from typing import Sequence
+from collections.abc import Sequence
 
 import cv2
 import numpy as np
 
 from kara_sygna import config
-from kara_sygna.visao.caracteristicas import FEATURES_POR_MAO, dividir_maos, eh_vetor_zerado
+from kara_sygna.visao.caracteristicas import (
+    FEATURES_POR_MAO,
+    dividir_maos,
+    eh_vetor_zerado,
+)
 
 LIGACOES = (
-    (0, 1), (1, 2), (2, 3), (3, 4),
-    (0, 5), (5, 6), (6, 7), (7, 8),
-    (0, 9), (9, 10), (10, 11), (11, 12),
-    (0, 13), (13, 14), (14, 15), (15, 16),
-    (0, 17), (17, 18), (18, 19), (19, 20),
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+    (0, 5),
+    (5, 6),
+    (6, 7),
+    (7, 8),
+    (0, 9),
+    (9, 10),
+    (10, 11),
+    (11, 12),
+    (0, 13),
+    (13, 14),
+    (14, 15),
+    (15, 16),
+    (0, 17),
+    (17, 18),
+    (18, 19),
+    (19, 20),
 )
 PALMA = (0, 5, 9, 13, 17)
 
@@ -83,17 +102,29 @@ def projetar_mao(
     projetados = []
     for x, y, z in pontos:
         fator = distancia_camera / max(0.25, distancia_camera - z)
-        projetados.append((int(centro_x + x * escala * fator), int(centro_y - y * escala * fator), float(z)))
+        projetados.append(
+            (
+                int(centro_x + x * escala * fator),
+                int(centro_y - y * escala * fator),
+                float(z),
+            )
+        )
     return projetados
 
 
-def cor_por_profundidade(z: float, cor_base: tuple[int, int, int]) -> tuple[int, int, int]:
+def cor_por_profundidade(
+    z: float, cor_base: tuple[int, int, int]
+) -> tuple[int, int, int]:
     """Escurece/clareia a cor conforme a profundidade (mais perto = mais claro)."""
     brilho = int(np.clip(170 + z * 75, 75, 255))
     return tuple(int(c * brilho / 255) for c in cor_base)
 
 
-def desenhar_mao_3d(tela: np.ndarray, pontos: Sequence[tuple[int, int, float]], cor_base: tuple[int, int, int]) -> None:
+def desenhar_mao_3d(
+    tela: np.ndarray,
+    pontos: Sequence[tuple[int, int, float]],
+    cor_base: tuple[int, int, int],
+) -> None:
     """Desenha palma, ossos e juntas ordenados por profundidade.
 
     Args:
@@ -111,11 +142,20 @@ def desenhar_mao_3d(tela: np.ndarray, pontos: Sequence[tuple[int, int, float]], 
         x2, y2, z2 = pontos[fim]
         z_medio = (z1 + z2) / 2
         espessura = max(2, int(5 + z_medio * 2))
-        cv2.line(tela, (x1, y1), (x2, y2), cor_por_profundidade(z_medio, cor_base), espessura, cv2.LINE_AA)
+        cv2.line(
+            tela,
+            (x1, y1),
+            (x2, y2),
+            cor_por_profundidade(z_medio, cor_base),
+            espessura,
+            cv2.LINE_AA,
+        )
 
     for x, y, z in sorted(pontos, key=lambda ponto: ponto[2]):
         raio = max(3, int(6 + z * 2))
-        cv2.circle(tela, (x, y), raio, cor_por_profundidade(z, cor_base), -1, cv2.LINE_AA)
+        cv2.circle(
+            tela, (x, y), raio, cor_por_profundidade(z, cor_base), -1, cv2.LINE_AA
+        )
         cv2.circle(tela, (x, y), raio, (245, 245, 245), 1, cv2.LINE_AA)
 
 
@@ -126,7 +166,16 @@ def criar_painel(tamanho: tuple[int, int]) -> np.ndarray:
     for passo in range(1, 5):
         y = int(altura * passo / 5)
         cv2.line(tela, (0, y), (largura, y), (35, 39, 52), 1)
-    cv2.putText(tela, "MAO 3D", (18, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.8, COR_TEXTO, 2, cv2.LINE_AA)
+    cv2.putText(
+        tela,
+        "MAO 3D",
+        (18, 34),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        COR_TEXTO,
+        2,
+        cv2.LINE_AA,
+    )
     return tela
 
 
@@ -154,21 +203,65 @@ def desenhar_quadro_sinal(
     esquerda, direita = dividir_maos(vetor)
     cores = (config.CORES_MAOS_BGR["esq"], config.CORES_MAOS_BGR["dir"])
 
-    cv2.line(tela, (largura // 2, 55), (largura // 2, altura - 15), COR_DIVISORIA, 1, cv2.LINE_AA)
-    cv2.putText(tela, "ESQUERDA", (int(largura * 0.10), 70), cv2.FONT_HERSHEY_SIMPLEX, 0.55, cores[0], 1, cv2.LINE_AA)
-    cv2.putText(tela, "DIREITA", (int(largura * 0.65), 70), cv2.FONT_HERSHEY_SIMPLEX, 0.55, cores[1], 1, cv2.LINE_AA)
+    cv2.line(
+        tela,
+        (largura // 2, 55),
+        (largura // 2, altura - 15),
+        COR_DIVISORIA,
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        tela,
+        "ESQUERDA",
+        (int(largura * 0.10), 70),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        cores[0],
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        tela,
+        "DIREITA",
+        (int(largura * 0.65), 70),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        cores[1],
+        1,
+        cv2.LINE_AA,
+    )
 
-    for mao, cor, posicao in ((esquerda, cores[0], POSICAO_ESQUERDA), (direita, cores[1], POSICAO_DIREITA)):
+    for mao, cor, posicao in (
+        (esquerda, cores[0], POSICAO_ESQUERDA),
+        (direita, cores[1], POSICAO_DIREITA),
+    ):
         if eh_vetor_zerado(mao):
             continue
         pontos = projetar_mao(mao, tamanho, angulo_x, angulo_y, posicao)
         desenhar_mao_3d(tela, pontos, cor)
 
-    cv2.putText(tela, legenda, (18, altura - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, COR_TEXTO, 1, cv2.LINE_AA)
+    cv2.putText(
+        tela,
+        legenda,
+        (18, altura - 20),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        COR_TEXTO,
+        1,
+        cv2.LINE_AA,
+    )
     return tela
 
 
 __all__ = [
-    "FEATURES_POR_MAO", "LIGACOES", "PALMA", "rotacionar", "projetar_mao", "cor_por_profundidade",
-    "desenhar_mao_3d", "criar_painel", "desenhar_quadro_sinal",
+    "FEATURES_POR_MAO",
+    "LIGACOES",
+    "PALMA",
+    "cor_por_profundidade",
+    "criar_painel",
+    "desenhar_mao_3d",
+    "desenhar_quadro_sinal",
+    "projetar_mao",
+    "rotacionar",
 ]

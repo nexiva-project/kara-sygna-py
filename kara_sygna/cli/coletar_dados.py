@@ -28,7 +28,9 @@ SEGUNDOS_CONTAGEM = 3
 JANELA = "kara-sygna - Coleta de Dados"
 
 
-def gravar_rodada(camera: Camera, detector: DetectorMaos, controlador: ControladorSinais, palavra: str) -> bool:
+def gravar_rodada(
+    camera: Camera, detector: DetectorMaos, controlador: ControladorSinais, palavra: str
+) -> bool:
     """Grava uma rodada de um sinal.
 
     Args:
@@ -51,7 +53,10 @@ def gravar_rodada(camera: Camera, detector: DetectorMaos, controlador: Controlad
             quadro = cv2.flip(quadro, 1)
             agora = time.monotonic()
             if agora < inicio:
-                texto, cor = f"Prepare '{palavra}': {int(inicio - agora) + 1}", (0, 200, 255)
+                texto, cor = (
+                    f"Prepare '{palavra}': {int(inicio - agora) + 1}",
+                    (0, 200, 255),
+                )
             else:
                 resultado = detector.detectar(quadro)
                 detector.desenhar(quadro, resultado)
@@ -59,7 +64,10 @@ def gravar_rodada(camera: Camera, detector: DetectorMaos, controlador: Controlad
                     if agora - ultimo >= INTERVALO_ENTRE_QUADROS_S:
                         controlador.processar_quadro(montar_vetor_duas_maos(resultado))
                         gravados, ultimo = gravados + 1, agora
-                    texto, cor = f"Gravando '{palavra}': {gravados}/{QUADROS_POR_RODADA}", (0, 0, 255)
+                    texto, cor = (
+                        f"Gravando '{palavra}': {gravados}/{QUADROS_POR_RODADA}",
+                        (0, 0, 255),
+                    )
                 else:
                     texto, cor = "Mostre a mao para a camera", (0, 165, 255)
             cv2.putText(quadro, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, cor, 2)
@@ -90,7 +98,9 @@ def main() -> int:
     try:
         with DetectorMaos() as detector:
             while True:
-                palavra = input("Nome do sinal (Enter vazio para sair): ").strip().lower()
+                palavra = (
+                    input("Nome do sinal (Enter vazio para sair): ").strip().lower()
+                )
                 if not palavra:
                     break
                 try:
@@ -99,7 +109,9 @@ def main() -> int:
                 except ErroAplicacao as erro:
                     print(erro)
                     continue
-                print(f"Rodada de '{palavra}' concluída. Repita variando posição/distância.\n")
+                print(
+                    f"Rodada de '{palavra}' concluída. Repita variando posição/distância.\n"
+                )
     finally:
         camera.liberar()
         cv2.destroyAllWindows()

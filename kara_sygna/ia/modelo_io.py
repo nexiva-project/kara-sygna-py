@@ -55,7 +55,9 @@ def validar_modelo(modelo: Any) -> None:
 
     nomes = getattr(modelo, "feature_names_in_", None)
     if nomes is not None and list(nomes) != nomes_features():
-        raise ModeloInvalidoError("O modelo foi treinado com outras colunas. Treine a IA de novo.")
+        raise ModeloInvalidoError(
+            "O modelo foi treinado com outras colunas. Treine a IA de novo."
+        )
 
 
 def carregar_modelo(caminho: Path) -> Any:
@@ -94,6 +96,6 @@ def classes_do_modelo(caminho_modelo: Path) -> set[str]:
         return {str(c) for c in carregar_modelo(caminho_modelo).classes_}
     except (FileNotFoundError, ModeloInvalidoError):
         return set()
-    except Exception:  # noqa: BLE001 - arquivo corrompido não deve derrubar a interface
+    except Exception:
         logger.exception("Não foi possível consultar as classes do modelo.")
         return set()
