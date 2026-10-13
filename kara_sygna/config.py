@@ -27,8 +27,8 @@ INDICES_CAMERA = (0, 1, 2, 3, 4)
 # normalizadas pela imagem, então manter a mesma proporção (4:3) em todos os
 # computadores evita que o modelo "veja" mãos esticadas ou achatadas.
 # Use None para não forçar nenhuma resolução.
-LARGURA_CAPTURA = 640
-ALTURA_CAPTURA = 480
+LARGURA_CAPTURA = 1024
+ALTURA_CAPTURA = 768
 LEITURAS_DE_TESTE = 10
 PAUSA_ENTRE_LEITURAS_S = 0.05
 
@@ -42,7 +42,7 @@ CONFIANCA_RASTREIO = 0.5
 # O frame é espelhado antes de ser enviado ao MediaPipe; com isso os rótulos
 # "Left"/"Right" saem trocados nesta configuração. Mudar este valor altera o
 # significado dos dados já gravados: se mudar, grave os sinais de novo.
-INVERTER_LATERALIDADE = True
+INVERTER_LATERALIDADE = False
 
 # Cores (BGR, como o OpenCV espera) usadas para desenhar cada mão.
 CORES_MAOS_BGR = {"esq": (70, 190, 255), "dir": (150, 105, 255)}
