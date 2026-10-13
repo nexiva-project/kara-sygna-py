@@ -94,7 +94,7 @@ class DetectorMaos:
             except (AttributeError, IndexError, TypeError):
                 lado = "esquerda"
 
-            sufixo = "esquerda" if lado in ("esquerda", "left", 0) else "direita"
+            sufixo = "esquerda" if lado == "esq" else "direita"
 
             cor_linha = _cor_bgr(
                 estilo.get(f"maos_cor_linha_{sufixo}"),
