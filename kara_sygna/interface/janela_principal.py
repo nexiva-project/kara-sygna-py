@@ -43,7 +43,7 @@ from kara_sygna.interface.janela_log import JanelaLog
 from kara_sygna.interface.janela_previsualizacao import JanelaPrevisualizacao
 from kara_sygna.interface.janela_sinais import JanelaSinais
 from kara_sygna.interface.tarefas import ExecutorTk
-from kara_sygna.visao.detector_corpo import DetectorCorpo
+from kara_sygna.visao.detector_corpo import LEGENDA_CORPO, DetectorCorpo, desenhar_corpo
 from kara_sygna.visao.detector_maos import DetectorMaos, tem_maos
 from kara_sygna.visao.detector_rosto import DetectorRosto, ResultadoRosto
 from kara_sygna.visao.maos_pelo_corpo import conferir_maos
@@ -77,17 +77,18 @@ PADRAO_VISUAL = {
     "face_cor_regiao_ponto": "#00FFFF",
     "face_cor_regiao_texto": "#00FFFF",
     "face_cor_status": "#00FF00",
-    "face_cor_leve": "#00AAFF",
+    "face_cor_leve": "#00D7FF",
     "face_espessura_linha": 1,
     "face_tamanho_ponto": 1,
     "face_tamanho_regiao": 4,
     "face_espessura_texto": 1,
-    "face_espessura_leve": 2,
+    "face_espessura_leve": 1,
     "video_cor_texto": "#FFFFFF",
     "texto_cor_sinais": "#FFFFFF",
     # Exibição: esconde o desenho sem afetar a detecção nem a IA.
     "mostrar_maos": True,
     "mostrar_rosto": True,
+    "mostrar_corpo": True,
     "mostrar_linhas_rosto": True,
     "mostrar_pontos_rosto": True,
     "mostrar_nomes_rosto": True,
@@ -494,6 +495,7 @@ class JanelaPrincipal:
 
         self._controle_interruptor(conteudo, "Mostrar mãos", "mostrar_maos")
         self._controle_interruptor(conteudo, "Mostrar rosto", "mostrar_rosto")
+        self._controle_interruptor(conteudo, "Mostrar corpo", "mostrar_corpo")
         self._controle_interruptor(conteudo, "Linhas do rosto", "mostrar_linhas_rosto")
         self._controle_interruptor(conteudo, "Pontos do rosto", "mostrar_pontos_rosto")
         self._controle_interruptor(
@@ -542,9 +544,9 @@ class JanelaPrincipal:
         )
 
         self._titulo_config(conteudo, "ROSTO / FACEMESH")
-        self._controle_cor(conteudo, "Linhas do rosto leve", "face_cor_leve")
+        self._controle_cor(conteudo, "Linhas do rosto", "face_cor_leve")
         self._controle_tamanho(
-            conteudo, "Espessura do rosto leve", "face_espessura_leve"
+            conteudo, "Espessura do contorno do rosto", "face_espessura_leve"
         )
         self._controle_cor(conteudo, "Malha facial", "face_cor_malha")
         self._controle_cor(conteudo, "Contorno facial", "face_cor_contorno")
@@ -1240,6 +1242,17 @@ class JanelaPrincipal:
             font=("Arial", 8, "bold"),
         ).pack(side="left", padx=18)
 
+        legenda_corpo = tk.Frame(caixa, bg="#111B2D")
+        legenda_corpo.pack(fill="x", padx=16, pady=(0, 8))
+        for nome, cor in LEGENDA_CORPO:
+            tk.Label(
+                legenda_corpo,
+                text=f"● {nome}",
+                bg="#111B2D",
+                fg=cor,
+                font=("Arial", 8, "bold"),
+            ).pack(side="left", padx=(0, 14))
+
         # Tempo de gravação do ensino, logo abaixo da câmera.
         linha_tempo = tk.Frame(caixa, bg="#111B2D")
         linha_tempo.pack(fill="x", padx=12, pady=(0, 10))
@@ -1931,6 +1944,9 @@ class JanelaPrincipal:
         # Os botões de exibição só escondem o desenho.
         # A detecção e a IA continuam usando os resultados originais.
         visual = self._config_visual
+
+        if visual.get("mostrar_corpo", True):
+            desenhar_corpo(quadro, resultado_corpo)
 
         if visual["mostrar_rosto"]:
             if resultado_rosto.presente and resultado_rosto.landmarks is not None:

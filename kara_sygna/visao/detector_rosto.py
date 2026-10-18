@@ -1,8 +1,8 @@
 """Kara Sygna — FaceMesh para detecção e extração facial.
 
 Rosto LEVE: o MediaPipe continua devolvendo os 468 pontos (o modelo precisa
-deles), mas o vetor entregue à IA e o desenho usam só 17 pontos-chave:
-olhos, nariz, boca e contorno do rosto.
+deles). O vetor da IA usa só 17 pontos-chave. O desenho da câmera segue o
+contorno (oval, sobrancelhas, olhos, nariz e lábios).
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ POS_NARIZ_LEVE = 3
 POS_LATERAL_ESQUERDA_LEVE = 8
 POS_LATERAL_DIREITA_LEVE = 16
 
-COR_ROSTO_LEVE = (255, 170, 0)  # BGR (azul claro, como na imagem de referência)
+COR_ROSTO_LEVE = (255, 215, 0)  # BGR do ciano da imagem de referência (#00D7FF)
 
 REGIOES_ROSTO: dict[str, tuple[int, ...]] = {
     "testa": (10, 67, 69, 104, 108, 109, 151, 297, 299, 333, 337, 338),
@@ -129,9 +129,55 @@ def _cor_bgr(valor: Any, padrao: tuple[int, int, int]) -> tuple[int, int, int]:
         return padrao
 
 
-def _inteiros(ponto: np.ndarray) -> tuple[int, int]:
-    """Converte (x, y) float para pixels inteiros."""
-    return round(float(ponto[0])), round(float(ponto[1]))
+def conexoes_rosto_referencia(face_mesh: Any) -> frozenset[tuple[int, int]]:
+    """Ligações do desenho: contorno do FaceMesh mais o nariz.
+
+    ``FACEMESH_CONTOURS`` traz oval, sobrancelhas, olhos e lábios. O nariz
+    fica num conjunto à parte; sem ele o desenho não fecha como na referência.
+    """
+    return face_mesh.FACEMESH_CONTOURS.union(face_mesh.FACEMESH_NOSE)
+
+
+def desenhar_contorno_rosto(
+    tela: np.ndarray,
+    landmarks: Any,
+    conexoes: frozenset[tuple[int, int]] | set[tuple[int, int]],
+    cor: tuple[int, int, int],
+    espessura: int,
+    raio: int,
+    desenhar_linhas: bool,
+    desenhar_pontos: bool,
+) -> None:
+    """Desenha o contorno do rosto (linhas e os pontos dessas linhas)."""
+    pontos = getattr(landmarks, "landmark", None)
+    if pontos is None or not (desenhar_linhas or desenhar_pontos):
+        return
+
+    altura, largura = tela.shape[:2]
+
+    def pixel(indice: int) -> tuple[int, int] | None:
+        if indice >= len(pontos):
+            return None
+        ponto = pontos[indice]
+        x = round(float(ponto.x) * largura)
+        y = round(float(ponto.y) * altura)
+        if not (0 <= x < largura and 0 <= y < altura):
+            return None
+        return x, y
+
+    if desenhar_linhas:
+        for origem, destino in conexoes:
+            a = pixel(origem)
+            b = pixel(destino)
+            if a is not None and b is not None:
+                cv2.line(tela, a, b, cor, espessura, cv2.LINE_AA)
+
+    if desenhar_pontos:
+        indices = {indice for par in conexoes for indice in par}
+        for indice in indices:
+            ponto = pixel(indice)
+            if ponto is not None:
+                cv2.circle(tela, ponto, raio, cor, -1, cv2.LINE_AA)
 
 
 @dataclass(frozen=True)
@@ -316,49 +362,6 @@ class DetectorRosto:
             presente=True,
         )
 
-    def _desenhar_leve(
-        self,
-        tela: np.ndarray,
-        landmarks: Any,
-        largura: int,
-        altura: int,
-        estilo: dict[str, Any],
-        cor_ponto: tuple[int, int, int],
-        tamanho_ponto: int,
-        desenhar_linhas: bool,
-        desenhar_pontos: bool,
-    ) -> None:
-        """Desenha o rosto leve: linhas (olhos, nariz, boca, contorno) e pontos."""
-        if not (desenhar_linhas or desenhar_pontos):
-            return
-
-        pontos = self.pontos_leves(landmarks, largura, altura)
-        if pontos is None:
-            return
-
-        cor = _cor_bgr(estilo.get("face_cor_leve"), COR_ROSTO_LEVE)
-        espessura = max(1, min(8, int(estilo.get("face_espessura_leve", 2))))
-        p = [_inteiros(ponto) for ponto in pontos]
-
-        if desenhar_linhas:
-            entre_olhos = float(np.linalg.norm(pontos[0] - pontos[1]))
-            raio_olho = max(3, int(0.12 * entre_olhos))
-
-            cv2.circle(tela, p[0], raio_olho, cor, espessura, cv2.LINE_AA)
-            cv2.circle(tela, p[1], raio_olho, cor, espessura, cv2.LINE_AA)
-
-            cv2.line(tela, p[2], p[3], cor, espessura, cv2.LINE_AA)  # ponte -> ponta
-            cv2.line(tela, p[3], p[4], cor, espessura, cv2.LINE_AA)  # ponta -> narina
-            cv2.line(tela, p[3], p[5], cor, espessura, cv2.LINE_AA)  # ponta -> narina
-            cv2.line(tela, p[6], p[7], cor, espessura, cv2.LINE_AA)  # boca
-
-            contorno = np.asarray(p[8:], dtype=np.int32).reshape(-1, 1, 2)
-            cv2.polylines(tela, [contorno], False, cor, espessura, cv2.LINE_AA)
-
-        if desenhar_pontos:
-            for ponto in p:
-                cv2.circle(tela, ponto, tamanho_ponto, cor_ponto, -1)
-
     def desenhar(
         self,
         quadro_bgr: np.ndarray,
@@ -374,9 +377,9 @@ class DetectorRosto:
         Cada elemento liga/desliga de forma independente. Isto só controla o
         DESENHO: a detecção e o vetor da IA não mudam.
 
-        desenhar_linhas: linhas do rosto leve (olhos, nariz, boca, contorno).
-        desenhar_malha: malha completa de 468 pontos (no construtor ou aqui).
-        desenhar_pontos: pontos do rosto (17 no rosto leve, 468 com a malha).
+        desenhar_linhas: contorno (oval, sobrancelhas, olhos, nariz, lábios).
+        desenhar_malha: teia completa de 468 pontos, por baixo do contorno.
+        desenhar_pontos: pontos do contorno (ou os 468, se a teia estiver ligada).
         desenhar_rotulos: nomes das regiões (NARIZ, BOCA...) e textos de estado.
         Chaves extras de estilo: face_cor_leve, face_espessura_leve.
         """
@@ -444,13 +447,12 @@ class DetectorRosto:
                 if 0 <= x < largura and 0 <= y < altura:
                     cv2.circle(tela, (x, y), tamanho_ponto, cor_ponto, -1)
 
-        self._desenhar_leve(
+        desenhar_contorno_rosto(
             tela,
             landmarks,
-            largura,
-            altura,
-            estilo,
-            cor_ponto,
+            conexoes_rosto_referencia(self._conexoes),
+            _cor_bgr(estilo.get("face_cor_leve"), COR_ROSTO_LEVE),
+            max(1, min(8, int(estilo.get("face_espessura_leve", 1)))),
             tamanho_ponto,
             desenhar_linhas,
             desenhar_pontos and not usar_malha,
@@ -489,11 +491,7 @@ class DetectorRosto:
         if desenhar_rotulos:
             cv2.putText(
                 tela,
-                (
-                    f"FACEMESH: {PONTOS_ROSTO} PONTOS"
-                    if usar_malha
-                    else f"ROSTO LEVE: {PONTOS_LEVES} PONTOS"
-                ),
+                (f"FACEMESH: {PONTOS_ROSTO} PONTOS" if usar_malha else "ROSTO"),
                 (15, altura - 15),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,

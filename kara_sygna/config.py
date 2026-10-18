@@ -55,8 +55,18 @@ REALCE_PELE_ESCURO = 0.1
 # última posição dela, no desenho e na IA. 0 = desliga.
 MEMORIA_MAO_S = 0.3
 
-# MediaPipe Pose (braços): 0 = modelo leve (~13 ms por quadro), 1 = completo.
-COMPLEXIDADE_POSE = 0
+# MediaPipe Pose. 0 = leve; 1 = completo, acha o tronco com a pessoa mais
+# perto (o leve perde o quadril quando o corpo enche a imagem). Se o modelo
+# completo não abrir, o app volta para o leve.
+COMPLEXIDADE_POSE = 1
+# Menor que a das mãos: com o tronco cortado, a confiança do corpo fica baixa
+# e 0,5 descartava a pessoa inteira.
+CONFIANCA_DETECCAO_POSE = 0.35
+CONFIANCA_RASTREIO_POSE = 0.3
+# Fração da maior borda acrescentada em volta do quadro antes do Pose.
+# A pessoa perto ocupa a imagem toda e o detector não acha o tronco; a borda
+# devolve o corpo para dentro, como se a câmera tivesse se afastado um pouco.
+BORDA_POSE = 0.2
 # Conferência das mãos pelos braços (tira as "mãos fantasmas"), em larguras
 # de ombro. Só é descartada a mão mais longe que isto dos dois pulsos do Pose
 # (o Pose erra o pulso com as mãos embaixo; com 0,6 ele descartava a mão
