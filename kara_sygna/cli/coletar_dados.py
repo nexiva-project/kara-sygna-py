@@ -19,23 +19,39 @@ from kara_sygna.aplicacao.controlador import ControladorSinais
 from kara_sygna.aplicacao.erros import ErroAplicacao
 from kara_sygna.aplicacao.inicializacao import preparar_ambiente
 from kara_sygna.camera import Camera, CameraIndisponivelError, abrir_camera
-from kara_sygna.visao.caracteristicas import montar_vetor_duas_maos
+from kara_sygna.visao.detector_corpo import (
+    DetectorCorpo,
+    SemCorpo,
+    criar_detector_corpo,
+)
 from kara_sygna.visao.detector_maos import DetectorMaos, tem_maos
+from kara_sygna.visao.detector_rosto import DetectorRosto
+from kara_sygna.visao.maos_pelo_corpo import conferir_maos
+from kara_sygna.visao.quadro import montar_vetor_quadro
+from kara_sygna.visao.realce_pele import RealcePele
 
-QUADROS_POR_RODADA = 80
-INTERVALO_ENTRE_QUADROS_S = 0.10  # evita gravar quadros quase idênticos
+# Quadros da câmera com mão por rodada. Quais deles vão para o CSV é decidido
+# por config.MODO_QUADROS (os gravados aparecem entre parênteses).
+QUADROS_POR_RODADA = 90
 SEGUNDOS_CONTAGEM = 3
 JANELA = "kara-sygna - Coleta de Dados"
 
 
 def gravar_rodada(
-    camera: Camera, detector: DetectorMaos, controlador: ControladorSinais, palavra: str
+    camera: Camera,
+    detector: DetectorMaos,
+    detector_rosto: DetectorRosto,
+    detector_corpo: DetectorCorpo | SemCorpo,
+    controlador: ControladorSinais,
+    palavra: str,
 ) -> bool:
     """Grava uma rodada de um sinal.
 
     Args:
         camera: Câmera aberta.
         detector: Detector de mãos.
+        detector_rosto: Detector do rosto (FaceMesh).
+        detector_corpo: Detector do corpo (braços).
         controlador: Controlador (grava no CSV).
         palavra: Nome do sinal.
 
@@ -43,8 +59,9 @@ def gravar_rodada(
         ``False`` se o usuário interrompeu com 'q' (ou a câmera falhou).
     """
     controlador.iniciar_ensino(palavra)
+    realce = RealcePele()
     inicio = time.monotonic() + SEGUNDOS_CONTAGEM
-    ultimo, gravados = 0.0, 0
+    gravados = 0
     try:
         while gravados < QUADROS_POR_RODADA:
             quadro = camera.ler()
@@ -58,16 +75,26 @@ def gravar_rodada(
                     (0, 200, 255),
                 )
             else:
-                resultado = detector.detectar(quadro)
+                rosto = detector_rosto.detectar(quadro)
+                realce.calibrar(quadro, rosto)
+                # Na gravação, sem memória da mão: os buracos são preenchidos
+                # pelo controlador, entre antes e depois (veja preenchimento.py).
+                corpo = detector_corpo.detectar(quadro)
+                altura, largura = quadro.shape[:2]
+                resultado = conferir_maos(
+                    detector.detectar(realce.aplicar(quadro)), corpo, largura, altura
+                )
+                controlador.processar_quadro(
+                    montar_vetor_quadro(resultado, rosto, largura, altura, corpo)
+                )
                 detector.desenhar(quadro, resultado)
                 if tem_maos(resultado):
-                    if agora - ultimo >= INTERVALO_ENTRE_QUADROS_S:
-                        controlador.processar_quadro(montar_vetor_duas_maos(resultado))
-                        gravados, ultimo = gravados + 1, agora
-                    texto, cor = (
-                        f"Gravando '{palavra}': {gravados}/{QUADROS_POR_RODADA}",
-                        (0, 0, 255),
+                    gravados += 1
+                    texto = (
+                        f"Gravando '{palavra}': {gravados}/{QUADROS_POR_RODADA} "
+                        f"({controlador.total_gravado})"
                     )
+                    cor = (0, 0, 255)
                 else:
                     texto, cor = "Mostre a mao para a camera", (0, 165, 255)
             cv2.putText(quadro, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, cor, 2)
@@ -75,7 +102,7 @@ def gravar_rodada(
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 return False
     finally:
-        controlador.parar()
+        print(controlador.parar())
     return True
 
 
@@ -96,7 +123,11 @@ def main() -> int:
     print(f"Dados serão salvos em: {controlador.repositorio.caminho}")
     print("Durante a gravação, 'q' na janela interrompe.\n")
     try:
-        with DetectorMaos() as detector:
+        with (
+            DetectorMaos() as detector,
+            DetectorRosto() as detector_rosto,
+            criar_detector_corpo() as detector_corpo,
+        ):
             while True:
                 palavra = (
                     input("Nome do sinal (Enter vazio para sair): ").strip().lower()
@@ -104,7 +135,14 @@ def main() -> int:
                 if not palavra:
                     break
                 try:
-                    if not gravar_rodada(camera, detector, controlador, palavra):
+                    if not gravar_rodada(
+                        camera,
+                        detector,
+                        detector_rosto,
+                        detector_corpo,
+                        controlador,
+                        palavra,
+                    ):
                         break
                 except ErroAplicacao as erro:
                     print(erro)

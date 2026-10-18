@@ -14,8 +14,9 @@ from kara_sygna.ia.modelo_io import (
     modelo_esta_atualizado,
     validar_modelo,
 )
-from kara_sygna.ia.rotacao import ROTACOES, gerar_vetores_rotacionados
-from testes.conftest import vetor_de_duas_maos, vetor_de_uma_mao
+from kara_sygna.ia.sequencia import total_features_janela
+from kara_sygna.visao.quadro import TOTAL_FEATURES_QUADRO
+from testes.conftest import gravacao_falsa, vetor_de_duas_maos, vetor_de_uma_mao
 
 
 def test_rotacao_nula_e_identidade_e_matrizes_sao_ortogonais():
@@ -23,26 +24,6 @@ def test_rotacao_nula_e_identidade_e_matrizes_sao_ortogonais():
     assert np.allclose(m[0], np.eye(3))
     for matriz in m:
         assert np.allclose(matriz @ matriz.T, np.eye(3), atol=1e-12)
-
-
-def test_rotacoes_geram_uma_linha_por_angulo_e_mantem_mao_ausente_zerada(rng):
-    v = vetor_de_uma_mao(rng, "dir")
-    saida = gerar_vetores_rotacionados(v)
-    assert saida.shape == (len(ROTACOES), 126)
-    assert np.allclose(saida[0], v)
-    assert np.all(saida[:, :63] == 0)
-
-
-def test_rotacao_preserva_o_tamanho_da_mao(rng):
-    v = vetor_de_uma_mao(rng, "esq")
-    saida = gerar_vetores_rotacionados(v)
-    normas = np.linalg.norm(saida[:, :63].reshape(len(saida), 21, 3), axis=2)
-    assert np.allclose(normas, normas[0], atol=1e-9)
-
-
-def test_rotacao_com_tamanho_errado():
-    with pytest.raises(ValueError):
-        gerar_vetores_rotacionados(np.zeros(5))
 
 
 def test_aumento_multiplica_linhas_e_mantem_rotulos(rng):
@@ -60,6 +41,14 @@ def test_aumento_nao_cria_mao_que_nao_existia_e_mantem_o_pulso_na_origem(rng):
     assert np.allclose(X2[:, 63:66], 0)
 
 
+def test_aumento_so_mexe_na_forma_das_maos_das_janelas(rng):
+    X = np.tile(np.arange(total_features_janela(), dtype=float), (4, 1))
+    X[:, :126] = vetor_de_duas_maos(rng)
+    X2, _ = expandir_treino(X, np.arange(4), 2, np.random.default_rng(0))
+    assert X2.shape == (12, total_features_janela())
+    assert np.array_equal(X2[:, 126:], np.tile(X[0, 126:], (12, 1)))
+
+
 def test_aumento_zero_variantes_devolve_o_original(rng):
     X = np.vstack([vetor_de_duas_maos(rng)])
     X2, y2 = expandir_treino(X, np.array(["a"]), 0)
@@ -73,20 +62,19 @@ def test_numero_de_variantes_respeita_limites():
 
 
 def _dados_sinteticos(
-    rng, rodadas_por_classe=3, por_rodada=12, classes=("a", "b", "c")
+    rng, rodadas_por_classe=3, por_rodada=20, classes=("a", "b", "c")
 ):
-    """Cada classe é uma mão diferente; cada rodada tem um pouco de ruído próprio."""
+    """Quadros gravados: cada classe é uma mão diferente; cada rodada, uma gravação."""
     X, y, g = [], [], []
     identificador = 0
     for k, classe in enumerate(classes):
-        modelo = vetor_de_duas_maos(np.random.default_rng(100 + k))
+        forma = vetor_de_duas_maos(np.random.default_rng(100 + k))
         for _ in range(rodadas_por_classe):
             identificador += 1
-            for _ in range(por_rodada):
-                X.append(modelo + rng.normal(0, 0.02, 126) * (modelo != 0))
-                y.append(classe)
-                g.append(identificador)
-    return ConjuntoDados(np.array(X), np.array(y), np.array(g))
+            X.append(gravacao_falsa(forma, rng, por_rodada))
+            y += [classe] * por_rodada
+            g += [identificador] * por_rodada
+    return ConjuntoDados(np.vstack(X), np.array(y), np.array(g))
 
 
 @pytest.fixture
@@ -106,16 +94,29 @@ def test_treinar_salva_modelo_e_resumo(tmp_path, rng, config_rapida):
     assert list(modelo.classes_) == ["a", "b", "c"] and modelo.n_jobs == 1
 
 
-def test_treinar_exige_dois_sinais(tmp_path, rng, config_rapida):
-    dados = _dados_sinteticos(rng, classes=("a",))
-    with pytest.raises(treinamento.TreinoImpossivelError, match="1 sinal"):
-        treinamento.treinar(dados, tmp_path / "m.pkl")
+def test_treinar_com_um_sinal_so(tmp_path, rng, config_rapida):
+    from kara_sygna.ia.reconhecimento import prever
+
+    caminho = tmp_path / "m.pkl"
+    resultado = treinamento.treinar(_dados_sinteticos(rng, classes=("a",)), caminho)
+    assert resultado.classes == ["a"] and resultado.acuracia_validacao is None
+    modelo = carregar_modelo(caminho)
+    predicao = prever(modelo, np.zeros(modelo.n_features_in_))
+    assert predicao.sinal == "a" and predicao.aceito
 
 
 def test_treinar_com_csv_vazio(tmp_path):
-    vazio = ConjuntoDados(np.empty((0, 126)), np.array([], dtype=str), np.array([]))
+    vazio = ConjuntoDados(
+        np.empty((0, TOTAL_FEATURES_QUADRO)), np.array([], dtype=str), np.array([])
+    )
     with pytest.raises(treinamento.TreinoImpossivelError, match="vazio"):
         treinamento.treinar(vazio, tmp_path / "m.pkl")
+
+
+def test_gravacoes_curtas_demais_nao_treinam(tmp_path, rng, config_rapida):
+    dados = _dados_sinteticos(rng, por_rodada=config.QUADROS_POR_JANELA - 1)
+    with pytest.raises(treinamento.TreinoImpossivelError, match="curtas demais"):
+        treinamento.treinar(dados, tmp_path / "m.pkl")
 
 
 def test_com_uma_rodada_por_sinal_pula_a_avaliacao_mas_treina(

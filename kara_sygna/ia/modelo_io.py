@@ -9,7 +9,7 @@ from typing import Any
 
 import joblib
 
-from kara_sygna.visao.caracteristicas import TOTAL_FEATURES, nomes_features
+from kara_sygna.ia.sequencia import nomes_features_janela, total_features_janela
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,8 @@ def salvar_modelo(modelo: Any, caminho: Path) -> None:
     caminho = Path(caminho)
     caminho.parent.mkdir(parents=True, exist_ok=True)
     temporario = caminho.with_suffix(caminho.suffix + ".tmp")
-    joblib.dump(modelo, temporario)
+    # Comprimido: o RandomForest cru ocupa dezenas de MB; assim fica ~3x menor.
+    joblib.dump(modelo, temporario, compress=3)
     os.replace(temporario, caminho)
     logger.info("Modelo salvo em %s", caminho)
 
@@ -47,14 +48,14 @@ def validar_modelo(modelo: Any) -> None:
         raise ModeloInvalidoError("O modelo carregado não oferece predict_proba().")
 
     esperado = getattr(modelo, "n_features_in_", None)
-    if esperado is not None and esperado != TOTAL_FEATURES:
+    if esperado is not None and esperado != total_features_janela():
         raise ModeloInvalidoError(
-            f"O modelo espera {esperado} características, mas o programa gera {TOTAL_FEATURES}. "
+            f"O modelo espera {esperado} características, mas o programa gera {total_features_janela()}. "
             "Treine a IA de novo com o CSV atual."
         )
 
     nomes = getattr(modelo, "feature_names_in_", None)
-    if nomes is not None and list(nomes) != nomes_features():
+    if nomes is not None and list(nomes) != nomes_features_janela():
         raise ModeloInvalidoError(
             "O modelo foi treinado com outras colunas. Treine a IA de novo."
         )
@@ -90,10 +91,29 @@ def modelo_esta_atualizado(caminho_modelo: Path, caminho_csv: Path) -> bool:
     return caminho_modelo.stat().st_mtime >= caminho_csv.stat().st_mtime
 
 
+#: {caminho: (data de modificação, classes)}: a lista de sinais é atualizada
+#: depois de cada etapa do ensino, e carregar o modelo inteiro a cada vez
+#: travava a interface.
+_classes_em_cache: dict[Path, tuple[float, set[str]]] = {}
+
+
 def classes_do_modelo(caminho_modelo: Path) -> set[str]:
-    """Lista os sinais que o modelo salvo conhece (vazio se não houver modelo válido)."""
+    """Lista os sinais que o modelo salvo conhece (vazio se não houver modelo válido).
+
+    O resultado fica guardado até o arquivo do modelo mudar.
+    """
+    caminho_modelo = Path(caminho_modelo)
     try:
-        return {str(c) for c in carregar_modelo(caminho_modelo).classes_}
+        momento = caminho_modelo.stat().st_mtime
+    except FileNotFoundError:
+        return set()
+    guardado = _classes_em_cache.get(caminho_modelo)
+    if guardado is not None and guardado[0] == momento:
+        return set(guardado[1])
+    try:
+        classes = {str(c) for c in carregar_modelo(caminho_modelo).classes_}
+        _classes_em_cache[caminho_modelo] = (momento, classes)
+        return set(classes)
     except (FileNotFoundError, ModeloInvalidoError):
         return set()
     except Exception:

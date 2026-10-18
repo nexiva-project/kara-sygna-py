@@ -1,4 +1,8 @@
-"""Treinamento do classificador, com avaliação honesta por rodada."""
+"""Treinamento do classificador, com avaliação honesta por rodada.
+
+Os quadros gravados viram janelas (:mod:`kara_sygna.ia.sequencia`) antes do
+treino: a IA aprende a pose, o lugar em relação ao rosto e o movimento.
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,7 @@ from kara_sygna import config
 from kara_sygna.dados.repositorio import ConjuntoDados
 from kara_sygna.ia.aumento import expandir_treino, numero_de_variantes
 from kara_sygna.ia.modelo_io import salvar_modelo
-from kara_sygna.visao.caracteristicas import nomes_features
+from kara_sygna.ia.sequencia import montar_amostras, nomes_features_janela
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +39,8 @@ class ResultadoTreino:
     """Resumo do treinamento.
 
     Attributes:
-        amostras: Quantidade de linhas usadas.
+        amostras: Quantidade de janelas usadas (cada gravação conta também
+            espelhada).
         classes: Sinais aprendidos.
         rodadas: Quantidade de rodadas de gravação distintas.
         acuracia_validacao: Acurácia na validação por rodada, ou ``None`` se
@@ -65,7 +70,7 @@ def _ajustar(X: np.ndarray, y: np.ndarray) -> RandomForestClassifier:
     """Aumenta os dados de treino e ajusta um modelo novo."""
     X_exp, y_exp = expandir_treino(X, y, numero_de_variantes(len(X)))
     modelo = _novo_modelo()
-    modelo.fit(pd.DataFrame(X_exp, columns=nomes_features()), y_exp)
+    modelo.fit(pd.DataFrame(X_exp, columns=nomes_features_janela()), y_exp)
     return modelo
 
 
@@ -80,7 +85,7 @@ def avaliar(
     aprende normalmente).
 
     Args:
-        dados: Todos os exemplos.
+        dados: Todas as amostras (janelas, veja :func:`montar_amostras`).
         progresso: Recebe mensagens de andamento.
 
     Returns:
@@ -107,7 +112,7 @@ def avaliar(
         progresso(f"Validando {numero}/{dobras}...")
         modelo = _ajustar(X[idx_treino], y[idx_treino])
         previstos[idx_teste] = modelo.predict(
-            pd.DataFrame(X[idx_teste], columns=nomes_features())
+            pd.DataFrame(X[idx_teste], columns=nomes_features_janela())
         )
 
     previstos = previstos.astype(str)
@@ -128,7 +133,7 @@ def treinar(
     Roda por vários segundos: na interface, chame em segundo plano.
 
     Args:
-        dados: Exemplos carregados do CSV.
+        dados: Quadros carregados do CSV (em ordem de gravação).
         caminho_modelo: Onde salvar o ``.pkl``. Um resumo ``.json`` é salvo ao lado.
         progresso: Recebe mensagens de andamento.
 
@@ -136,16 +141,18 @@ def treinar(
         :class:`ResultadoTreino`.
 
     Raises:
-        TreinoImpossivelError: Se o CSV estiver vazio ou tiver só 1 sinal.
+        TreinoImpossivelError: Se o CSV estiver vazio ou sem gravações com mãos.
     """
     if len(dados) == 0:
-        raise TreinoImpossivelError("O CSV está vazio. Ensine pelo menos dois sinais.")
-    classes = dados.classes
-    if len(classes) < 2:
+        raise TreinoImpossivelError("O CSV está vazio. Ensine pelo menos um sinal.")
+    progresso("Montando as sequências de quadros...")
+    dados = montar_amostras(dados)
+    if len(dados) == 0:
         raise TreinoImpossivelError(
-            "Só há 1 sinal gravado. Grave pelo menos 2 sinais — de preferência também um "
-            "sinal 'neutro' (mão relaxada) para a IA saber quando NÃO há sinal."
+            "As gravações são curtas demais ou não mostram as mãos. Grave cada "
+            "sinal por pelo menos alguns segundos, com as mãos visíveis."
         )
+    classes = dados.classes
 
     rodadas = len(set(dados.grupos.tolist()))
     progresso(f"{len(dados)} exemplos, {len(classes)} sinais, {rodadas} rodadas.")

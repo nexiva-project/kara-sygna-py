@@ -59,9 +59,12 @@ def backends_da_plataforma(sistema: str | None = None) -> list[Backend]:
     sistema = sistema or platform.system()
     automatico = Backend("automático", cv2.CAP_ANY)
     if sistema == "Windows":
+        # MediaFoundation primeiro: em webcams comuns ele entrega 30 quadros
+        # por segundo, contra ~16 do DirectShow. Com mais quadros a mão anda
+        # menos entre um e outro e o MediaPipe a acompanha melhor.
         return [
-            Backend("DirectShow", cv2.CAP_DSHOW),
             Backend("MediaFoundation", cv2.CAP_MSMF),
+            Backend("DirectShow", cv2.CAP_DSHOW),
             automatico,
         ]
     if sistema == "Linux":
@@ -69,6 +72,33 @@ def backends_da_plataforma(sistema: str | None = None) -> list[Backend]:
     if sistema == "Darwin":
         return [Backend("AVFoundation", cv2.CAP_AVFOUNDATION), automatico]
     return [automatico]
+
+
+def recortar_proporcao(quadro: np.ndarray, proporcao: float) -> np.ndarray:
+    """Recorta o centro do quadro para a proporção ``largura / altura`` pedida.
+
+    As características das mãos usam coordenadas relativas à largura e à
+    altura da imagem. Um quadro 16:9 "achata" a mão em relação aos dados
+    gravados em 4:3, então todo quadro precisa ter a mesma proporção.
+
+    Args:
+        quadro: Imagem BGR.
+        proporcao: Proporção desejada (ex.: ``640 / 480``).
+
+    Returns:
+        Uma *view* recortada do quadro (ou o próprio quadro, se já estiver
+        na proporção certa).
+    """
+    altura, largura = quadro.shape[:2]
+    if abs(largura / altura - proporcao) < 0.01:
+        return quadro
+    if largura / altura > proporcao:
+        nova_largura = round(altura * proporcao)
+        inicio = (largura - nova_largura) // 2
+        return quadro[:, inicio : inicio + nova_largura]
+    nova_altura = round(largura / proporcao)
+    inicio = (altura - nova_altura) // 2
+    return quadro[inicio : inicio + nova_altura]
 
 
 class Camera:
@@ -85,6 +115,7 @@ class Camera:
         backend: Backend,
         largura: int,
         altura: int,
+        proporcao: float | None = None,
     ) -> None:
         """Cria o invólucro.
 
@@ -92,19 +123,39 @@ class Camera:
             captura: Objeto ``cv2.VideoCapture`` já aberto.
             indice: Índice da câmera no sistema (0, 1, ...).
             backend: Backend com o qual a câmera foi aberta.
-            largura: Largura real dos quadros, em pixels.
-            altura: Altura real dos quadros, em pixels.
+            largura: Largura real dos quadros entregues pela câmera, em pixels.
+            altura: Altura real dos quadros entregues pela câmera, em pixels.
+            proporcao: Se informada, cada quadro é recortado no centro para
+                esta proporção (``largura / altura``). ``None`` não recorta.
         """
         self._captura = captura
         self.indice = indice
         self.backend = backend
-        self.largura = largura
-        self.altura = altura
+        self.proporcao = proporcao
+        self.largura_original = largura
+        self.altura_original = altura
+        # Tamanho dos quadros que ``ler`` devolve (depois do recorte).
+        if proporcao:
+            recortado = recortar_proporcao(np.empty((altura, largura, 0)), proporcao)
+            self.altura, self.largura = recortado.shape[:2]
+        else:
+            self.largura, self.altura = largura, altura
+
+    @property
+    def recortada(self) -> bool:
+        """Informa se os quadros são recortados para manter a proporção."""
+        return (self.largura, self.altura) != (
+            self.largura_original,
+            self.altura_original,
+        )
 
     @property
     def descricao(self) -> str:
         """Texto curto como ``"câmera 0 via V4L2 (640x480)"``."""
-        return f"câmera {self.indice} via {self.backend.nome} ({self.largura}x{self.altura})"
+        tamanho = f"{self.largura_original}x{self.altura_original}"
+        if self.recortada:
+            tamanho += f", recortada para {self.largura}x{self.altura}"
+        return f"câmera {self.indice} via {self.backend.nome} ({tamanho})"
 
     def ler(self) -> np.ndarray | None:
         """Lê o próximo quadro.
@@ -115,6 +166,10 @@ class Camera:
         sucesso, quadro = self._captura.read()
         if not sucesso or quadro is None:
             return None
+        if self.proporcao:
+            # Cópia contínua na memória: o MediaPipe e o Tk não aceitam
+            # bem uma "fatia" com saltos entre as linhas.
+            quadro = np.ascontiguousarray(recortar_proporcao(quadro, self.proporcao))
         return quadro
 
     def esta_aberta(self) -> bool:
@@ -209,7 +264,10 @@ def _tentar_abrir(
         return None
 
     altura_real, largura_real = quadro.shape[:2]
-    return Camera(captura, indice, backend, largura_real, altura_real)
+    # A câmera pode ignorar a resolução pedida (ex.: só entrega 16:9).
+    # Os quadros são recortados para a proporção pedida, a mesma dos dados.
+    proporcao = largura / altura if largura and altura else None
+    return Camera(captura, indice, backend, largura_real, altura_real, proporcao)
 
 
 def _mensagem_de_falha(falhas: Sequence[str], sistema: str) -> str:
@@ -284,6 +342,13 @@ def abrir_camera(
             )
             if camera is not None:
                 logger.info("Câmera conectada: %s", camera.descricao)
+                if camera.recortada:
+                    logger.warning(
+                        "A câmera não aceitou %dx%d; a imagem será recortada no "
+                        "centro para manter a proporção dos sinais gravados.",
+                        largura,
+                        altura,
+                    )
                 return camera
             logger.debug("%s", falhas[-1])
 

@@ -23,8 +23,8 @@ def test_sem_maos_gera_vetor_zerado(rng):
     assert vetor.shape == (126,) and c.eh_vetor_zerado(vetor)
 
 
-@pytest.mark.parametrize("rotulo, slot", [("Left", "dir"), ("Right", "esq")])
-def test_uma_mao_vai_para_o_slot_da_lateralidade_invertida(rng, rotulo, slot):
+@pytest.mark.parametrize("rotulo, slot", [("Left", "esq"), ("Right", "dir")])
+def test_uma_mao_vai_para_o_slot_da_sua_lateralidade(rng, rotulo, slot):
     vetor = c.montar_vetor_duas_maos(resultado_falso((mao_falsa(rng), rotulo)))
     esquerda, direita = c.dividir_maos(vetor)
     assert c.quantidade_de_maos(vetor) == 1
@@ -80,14 +80,3 @@ def test_tamanho_errado_gera_erro():
         c.dividir_maos(np.zeros(10))
     with pytest.raises(ValueError):
         c.espelhar_mao(np.zeros(10))
-
-
-def test_linhas_para_gravar_espelha_so_sinais_de_uma_mao(rng):
-    assert len(c.linhas_para_gravar(vetor_de_duas_maos(rng))) == 1
-    assert len(c.linhas_para_gravar(np.zeros(126))) == 1
-    linhas = c.linhas_para_gravar(vetor_de_uma_mao(rng, "dir"))
-    assert len(linhas) == 2
-    assert c.quantidade_de_maos(linhas[1]) == 1
-    assert not c.eh_vetor_zerado(linhas[1][c.IDX_ESQ]) and c.eh_vetor_zerado(
-        linhas[1][c.IDX_DIR]
-    )

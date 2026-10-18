@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="500" viewBox="0 0 520 500">
+<rect x="0" y="0" width="520" height="500" fill="#F0F0F0"/>
+<g id="Frame">
+<rect x="0" y="0" width="520" height="500" fill="#F0F0F0"/>
+<g id="Label - Sinais que a IA conhece">
+<rect x="15" y="15" width="192" height="25" fill="#F0F0F0"/>
+<text x="111.0" y="33.0" fill="#000000" font-family="Arial" font-size="17.3" font-weight="bold" text-anchor="middle" xml:space="preserve">Sinais que a IA conhece</text>
+</g>
+<g id="Label - ✓ treinado   |   • precisa treinar IA">
+<rect x="15" y="43" width="182" height="21" fill="#F0F0F0"/>
+<text x="106.0" y="58.0" fill="#666666" font-family="Segoe UI" font-size="12.0" text-anchor="middle" xml:space="preserve">✓ treinado   |   • precisa treinar IA</text>
+</g>
+<g id="Frame">
+<rect x="15" y="74" width="490" height="309" fill="#F0F0F0"/>
+<g id="Listbox">
+<rect x="15.5" y="74.5" width="472" height="308" fill="#FFFFFF" stroke="#F0F0F0" stroke-width="1"/>
+<text x="19.0" y="91.0" fill="#000000" font-family="Arial" font-size="14.7" text-anchor="start" xml:space="preserve">olá — 42 exemplos — ✓ treinado</text>
+<text x="19.0" y="108.0" fill="#000000" font-family="Arial" font-size="14.7" text-anchor="start" xml:space="preserve">obrigado — 35 exemplos — ✓ treinado</text>
+<text x="19.0" y="125.0" fill="#000000" font-family="Arial" font-size="14.7" text-anchor="start" xml:space="preserve">tudo bem — 28 exemplos — ✓ treinado</text>
+<text x="19.0" y="142.0" fill="#000000" font-family="Arial" font-size="14.7" text-anchor="start" xml:space="preserve">água — 12 exemplos — • precisa treinar</text>
+</g>
+<g id="Scrollbar">
+<rect x="488" y="74" width="17" height="309" fill="#E6E6E6"/>
+<rect x="491" y="92" width="11" height="103" fill="#C1C1C1"/>
+</g>
+</g>
+<g id="Button - ATUALIZAR LISTA">
+<rect x="15.5" y="393.5" width="489" height="25" fill="#F0F0F0" stroke="#F0F0F0" stroke-width="1"/>
+<rect x="16.5" y="394.5" width="487" height="23" fill="#F0F0F0" stroke="#ADADAD" stroke-width="1"/>
+<text x="260.0" y="410.5" fill="#000000" font-family="Segoe UI" font-size="12.0" text-anchor="middle" xml:space="preserve">ATUALIZAR LISTA</text>
+</g>
+<g id="Button - VER SINAL (SÓ AS MÃOS)">
+<rect x="15.5" y="426.5" width="489" height="25" fill="#F0F0F0" stroke="#F0F0F0" stroke-width="1"/>
+<rect x="16.5" y="427.5" width="487" height="23" fill="#F0F0F0" stroke="#ADADAD" stroke-width="1"/>
+<text x="260.0" y="443.5" fill="#000000" font-family="Segoe UI" font-size="12.0" text-anchor="middle" xml:space="preserve">VER SINAL (SÓ AS MÃOS)</text>
+</g>
+<g id="Button - APAGAR SINAL SELECIONADO">
+<rect x="15.5" y="459.5" width="489" height="25" fill="#F0F0F0" stroke="#F0F0F0" stroke-width="1"/>
+<rect x="16.5" y="460.5" width="487" height="23" fill="#F0F0F0" stroke="#ADADAD" stroke-width="1"/>
+<text x="260.0" y="476.5" fill="#9B1C1C" font-family="Segoe UI" font-size="12.0" text-anchor="middle" xml:space="preserve">APAGAR SINAL SELECIONADO</text>
+</g>
+</g>
+</svg>

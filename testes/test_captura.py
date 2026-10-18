@@ -9,14 +9,15 @@ from kara_sygna.camera import (
     abrir_camera,
     backends_da_plataforma,
 )
-from kara_sygna.camera.captura import _mensagem_de_falha
+from kara_sygna.camera.captura import _mensagem_de_falha, recortar_proporcao
 
 
 class CapturaFalsa:
     """Imita ``cv2.VideoCapture``: abre ou não, e entrega quadros após N leituras vazias."""
 
-    def __init__(self, aberta=True, leituras_vazias=0):
+    def __init__(self, aberta=True, leituras_vazias=0, tamanho=(640, 480)):
         self.aberta, self.vazias, self.liberada = aberta, leituras_vazias, False
+        self.tamanho = tamanho
 
     def isOpened(self):
         return self.aberta
@@ -28,7 +29,8 @@ class CapturaFalsa:
         if self.vazias > 0:
             self.vazias -= 1
             return False, None
-        return True, np.zeros((480, 640, 3), np.uint8)
+        largura, altura = self.tamanho
+        return True, np.zeros((altura, largura, 3), np.uint8)
 
     def release(self):
         self.liberada = True
@@ -50,7 +52,7 @@ RAPIDO = {"tentativas_leitura": 3, "pausa_s": 0}
 
 
 def test_backends_por_sistema():
-    assert next(b.nome for b in backends_da_plataforma("Windows")) == "DirectShow"
+    assert next(b.nome for b in backends_da_plataforma("Windows")) == "MediaFoundation"
     assert [b.nome for b in backends_da_plataforma("Linux")] == ["V4L2", "automático"]
     assert "DirectShow" not in [b.nome for b in backends_da_plataforma("Linux")]
     assert backends_da_plataforma("Darwin")[0].nome == "AVFoundation"
@@ -107,3 +109,56 @@ def test_liberar_e_contexto():
     ) as camera:
         assert camera.ler().shape == (480, 640, 3)
     assert captura.liberada
+
+
+def test_camera_16_9_e_recortada_para_4_3():
+    captura = CapturaFalsa(tamanho=(1280, 720))
+    camera = abrir_camera(
+        [0], [V4L2], fabrica=fabrica_de({(0, 200): captura}), **RAPIDO
+    )
+
+    assert camera.recortada
+    assert (camera.largura, camera.altura) == (960, 720)
+    assert "1280x720, recortada para 960x720" in camera.descricao
+    quadro = camera.ler()
+    assert quadro.shape == (720, 960, 3)
+    assert quadro.flags["C_CONTIGUOUS"]
+
+
+def test_camera_4_3_nao_e_recortada():
+    captura = CapturaFalsa(tamanho=(640, 480))
+    camera = abrir_camera(
+        [0], [V4L2], fabrica=fabrica_de({(0, 200): captura}), **RAPIDO
+    )
+
+    assert not camera.recortada
+    assert "recortada" not in camera.descricao
+    assert camera.ler().shape == (480, 640, 3)
+
+
+def test_sem_resolucao_pedida_nao_recorta():
+    captura = CapturaFalsa(tamanho=(1280, 720))
+    camera = abrir_camera(
+        [0],
+        [V4L2],
+        largura=None,
+        altura=None,
+        fabrica=fabrica_de({(0, 200): captura}),
+        **RAPIDO,
+    )
+
+    assert camera.ler().shape == (720, 1280, 3)
+
+
+def test_recorte_pega_o_centro():
+    quadro = np.zeros((720, 1280, 3), np.uint8)
+    quadro[:, 160:1120] = 255  # faixa central de 960 px
+
+    recortado = recortar_proporcao(quadro, 4 / 3)
+    assert recortado.shape == (720, 960, 3)
+    assert recortado.min() == 255
+
+
+def test_recorte_de_imagem_alta_corta_em_cima_e_embaixo():
+    quadro = np.zeros((1000, 600, 3), np.uint8)
+    assert recortar_proporcao(quadro, 4 / 3).shape == (450, 600, 3)

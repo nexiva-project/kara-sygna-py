@@ -6,7 +6,7 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import messagebox
 
-from kara_sygna.aplicacao.controlador import InfoSinal
+from kara_sygna.aplicacao.controlador import PREFIXO_PRE, InfoSinal
 from kara_sygna.interface import tema
 
 
@@ -87,10 +87,15 @@ class JanelaSinais(tk.Toplevel):
             return
         for sinal in sinais:
             estado = "✓ treinado" if sinal.treinado else "• precisa treinar"
-            self._lista.insert(
-                tk.END, f"{sinal.palavra} — {sinal.exemplos} exemplos — {estado}"
-            )
-            self._palavras.append(sinal.palavra)
+            if sinal.eh_pre_sinal:
+                nome = f"[pré-sinal] {sinal.palavra}"
+            elif sinal.pre_sinal:
+                nome = f"{sinal.palavra} (pré-sinal {sinal.pre_sinal})"
+            else:
+                nome = sinal.palavra
+            self._lista.insert(tk.END, f"{nome} — {sinal.exemplos} exemplos — {estado}")
+            # Chave: o pré-sinal "S" vira "pre:S" (veja InfoSinal.chave).
+            self._palavras.append(sinal.chave)
 
     def _selecionada(self, acao: str) -> str | None:
         """Palavra selecionada, ou ``None`` (avisando o usuário) se não houver."""
@@ -117,7 +122,8 @@ class JanelaSinais(tk.Toplevel):
             return
         if messagebox.askyesno(
             "Apagar sinal",
-            f"Apagar todos os exemplos de “{palavra}”?\n\nEsta ação não pode ser desfeita.",
+            f"Apagar todos os exemplos de “{palavra.removeprefix(PREFIXO_PRE)}”?"
+            "\n\nEsta ação não pode ser desfeita.",
             parent=self,
         ):
             self._ao_apagar(palavra)

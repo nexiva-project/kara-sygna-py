@@ -21,39 +21,22 @@ class ModeloFalso:
         return np.tile(self.probabilidades, (len(self.entrada), 1))
 
 
-class ModeloPorLinha(ModeloFalso):
-    """A linha ``melhor`` (uma rotação) é a única em que o modelo tem certeza."""
-
-    def __init__(self, melhor):
-        super().__init__([0.4, 0.3, 0.3])
-        self.melhor = melhor
-
-    def predict_proba(self, X):
-        p = super().predict_proba(X)
-        p[self.melhor] = [0.05, 0.9, 0.05]
-        return p
-
-
 def test_aceita_quando_confianca_e_margem_passam():
-    p = prever(ModeloFalso([0.8, 0.15, 0.05]), np.zeros(126), rotacoes=None)
+    p = prever(ModeloFalso([0.8, 0.15, 0.05]), np.zeros(126))
     assert (p.sinal, p.aceito) == ("a", True)
     assert p.margem == pytest.approx(0.65)
 
 
 @pytest.mark.parametrize("probabilidades", [[0.6, 0.3, 0.1], [0.74, 0.7, 0.0]])
 def test_recusa_confianca_baixa_ou_margem_pequena(probabilidades):
-    assert not prever(ModeloFalso(probabilidades), np.zeros(126), rotacoes=None).aceito
+    assert not prever(ModeloFalso(probabilidades), np.zeros(126)).aceito
 
 
-def test_escolhe_a_rotacao_mais_confiante():
-    p = prever(ModeloPorLinha(melhor=5), np.zeros(126))
-    assert p.sinal == "b" and p.rotacao == (45, 0, 0) and p.aceito
-
-
-def test_sem_correcao_so_testa_uma_vez():
+def test_avalia_o_vetor_uma_unica_vez():
     modelo = ModeloFalso([1, 0, 0])
-    prever(modelo, np.zeros(126), rotacoes=None)
-    assert modelo.entrada.shape == (1, 126)
+    prever(modelo, np.arange(232.0))
+    assert modelo.entrada.shape == (1, 232)
+    assert np.array_equal(modelo.entrada[0], np.arange(232.0))
 
 
 def test_estabilizador_confirma_depois_de_votos_suficientes():

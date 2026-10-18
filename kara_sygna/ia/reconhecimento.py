@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from collections import Counter, deque
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from kara_sygna import config
-from kara_sygna.ia.rotacao import ROTACOES, gerar_vetores_rotacionados
 
 
 @dataclass(frozen=True)
@@ -23,15 +22,14 @@ class Predicao:
         confianca: Probabilidade dessa palavra (0 a 1).
         margem: Diferença para a segunda mais provável (0 a 1).
         aceito: ``True`` se confiança e margem passam dos limites.
-        rotacao: Rotação ``(rx, ry, rz)`` em graus que gerou o melhor
-            resultado; ``(0, 0, 0)`` se nenhuma ajudou.
+        probabilidades: Probabilidade de cada sinal (para o diagnóstico).
     """
 
     sinal: str
     confianca: float
     margem: float
     aceito: bool
-    rotacao: tuple[int, int, int] = (0, 0, 0)
+    probabilidades: dict[str, float] = field(default_factory=dict)
 
 
 def _preparar_entrada(modelo: Any, matriz: np.ndarray):
@@ -40,41 +38,28 @@ def _preparar_entrada(modelo: Any, matriz: np.ndarray):
     return pd.DataFrame(matriz, columns=nomes) if nomes is not None else matriz
 
 
-def prever(
-    modelo: Any,
-    vetor: Sequence[float],
-    rotacoes: Sequence[tuple[int, int, int]] | None = ROTACOES,
-) -> Predicao:
-    """Prevê o sinal de um quadro, testando várias inclinações da mão.
+def prever(modelo: Any, vetor: Sequence[float]) -> Predicao:
+    """Prevê o sinal de uma janela de quadros.
+
+    A IA já aprendeu as inclinações da mão no treino (aumento de dados), então
+    o vetor é avaliado uma única vez, sem testar rotações aqui.
 
     Args:
         modelo: Modelo com ``predict_proba`` e ``classes_``.
-        vetor: Vetor de 126 valores.
-        rotacoes: Rotações a testar. ``None`` (ou lista com só ``(0,0,0)``)
-            desliga a correção de inclinação.
+        vetor: Vetor de uma janela (:func:`kara_sygna.ia.sequencia.features_janela`).
 
     Returns:
-        :class:`Predicao` da rotação em que o modelo ficou mais confiante.
+        :class:`Predicao`.
     """
-    rotacoes = tuple(rotacoes) if rotacoes else ((0, 0, 0),)
-    matriz = gerar_vetores_rotacionados(vetor, rotacoes)
-    probabilidades = modelo.predict_proba(_preparar_entrada(modelo, matriz))
-
-    melhor_por_linha = probabilidades.max(axis=1)
-    linha = int(melhor_por_linha.argmax())
-    p = probabilidades[linha]
+    matriz = np.asarray(vetor, dtype=np.float64).reshape(1, -1)
+    p = modelo.predict_proba(_preparar_entrada(modelo, matriz))[0]
+    todas = {str(c): float(v) for c, v in zip(modelo.classes_, p, strict=True)}
     ordem = np.argsort(p)[::-1]
     confianca = float(p[ordem[0]])
     segundo = float(p[ordem[1]]) if len(p) > 1 else 0.0
     margem = confianca - segundo
     aceito = confianca >= config.CONFIANCA_MINIMA and margem >= config.MARGEM_MINIMA
-    return Predicao(
-        str(modelo.classes_[ordem[0]]),
-        confianca,
-        margem,
-        aceito,
-        tuple(int(a) for a in rotacoes[linha]),
-    )
+    return Predicao(str(modelo.classes_[ordem[0]]), confianca, margem, aceito, todas)
 
 
 class Estabilizador:

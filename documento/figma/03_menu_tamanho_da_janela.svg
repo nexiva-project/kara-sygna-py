@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="142" height="377" viewBox="0 0 142 377">
+<rect x="0" y="0" width="142" height="377" fill="#0D1525" stroke="#243651" stroke-width="1"/>
+<g id="Item - 640×480">
+<text x="24" y="20.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">640×480</text>
+</g>
+<g id="Item - 720×480">
+<text x="24" y="46.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">720×480</text>
+</g>
+<g id="Item - 800×600">
+<text x="24" y="72.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">800×600</text>
+</g>
+<g id="Item - 1024×768">
+<text x="24" y="98.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1024×768</text>
+</g>
+<g id="Item - 1280×720">
+<text x="24" y="124.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1280×720</text>
+</g>
+<g id="Item - 1366×768">
+<rect x="2" y="132" width="138" height="26" fill="#00BFD9"/>
+<text x="24" y="150.0" fill="#07111E" font-family="Arial" font-size="13.3" xml:space="preserve">1366×768</text>
+</g>
+<g id="Item - 1440×900">
+<text x="24" y="176.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1440×900</text>
+</g>
+<g id="Item - 1600×900">
+<text x="24" y="202.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1600×900</text>
+</g>
+<g id="Item - 1680×1050">
+<text x="24" y="228.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1680×1050</text>
+</g>
+<g id="Item - 1920×1080">
+<text x="24" y="254.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1920×1080</text>
+</g>
+<g id="Item - 2560×1080">
+<text x="24" y="280.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">2560×1080</text>
+</g>
+<g id="Item - 2560×1440">
+<text x="24" y="306.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">2560×1440</text>
+</g>
+<rect x="6" y="318" width="130" height="1" fill="#30415C"/>
+<g id="Item - Tela cheia">
+<text x="24" y="341.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">Tela cheia</text>
+</g>
+<g id="Item - Personalizado...">
+<text x="24" y="367.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">Personalizado...</text>
+</g>
+</svg>

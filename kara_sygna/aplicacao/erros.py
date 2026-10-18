@@ -21,3 +21,7 @@ class ModeloAusenteError(ErroAplicacao):
 
 class ModeloDesatualizadoError(ErroAplicacao):
     """Os sinais mudaram depois do último treino."""
+
+
+class DuracaoInvalidaError(ErroAplicacao):
+    """O tempo de gravação escrito não é um número de segundos válido."""

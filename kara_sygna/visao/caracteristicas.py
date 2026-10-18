@@ -35,8 +35,8 @@ NOMES_LADO = {"esq": "Esquerda", "dir": "Direita"}
 def slot_do_rotulo(rotulo: str) -> str:
     """Converte o rótulo de lateralidade do MediaPipe em ``"esq"`` ou ``"dir"``.
 
-    Como a imagem é espelhada antes da detecção, o MediaPipe enxerga as mãos
-    "ao contrário"; ``config.INVERTER_LATERALIDADE`` corrige isso.
+    A imagem é espelhada antes da detecção, como o MediaPipe espera, então o
+    rótulo já é a mão de verdade (``config.INVERTER_LATERALIDADE`` = False).
 
     Args:
         rotulo: ``"Left"`` ou ``"Right"``, como devolvido pelo MediaPipe.
@@ -101,7 +101,7 @@ def _pontos_da_mao(landmarks: Any) -> np.ndarray:
     return np.array([[p.x, p.y, p.z] for p in landmarks.landmark], dtype=np.float64)
 
 
-def _normalizar_mao(pontos: Any) -> np.ndarray | None:
+def normalizar_mao(pontos: Any) -> np.ndarray | None:
     """Centra a mão no pulso e divide pelo tamanho médio da palma.
 
     Args:
@@ -146,35 +146,72 @@ def _rotulo_da_mao(lateralidades: list, indice: int) -> str | None:
     return classificacoes[0].label if classificacoes else None
 
 
-def _separar_maos(resultado: Any) -> dict[str, np.ndarray | None]:
-    """Distribui as mãos detectadas nos "slots" esquerda e direita.
+def indices_dos_slots(resultado: Any) -> dict[str, int | None]:
+    """Diz qual mão do resultado (índice) vai para cada "slot" esquerda/direita.
 
-    Com uma mão, vale a lateralidade informada pelo MediaPipe. Com duas, vale a
-    posição horizontal, para que uma mão nunca sobrescreva a outra se os dois
+    Se o resultado já traz o lado de cada mão (``lados``, dado pelos braços em
+    :func:`kara_sygna.visao.maos_pelo_corpo.conferir_maos`), ele vale. Senão,
+    com uma mão vale a lateralidade informada pelo MediaPipe, e com duas vale
+    a posição horizontal, para que uma mão nunca sobrescreva a outra se os dois
     rótulos vierem iguais.
     """
-    slots: dict[str, np.ndarray | None] = {"esq": None, "dir": None}
+    slots: dict[str, int | None] = {"esq": None, "dir": None}
     listas = getattr(resultado, "multi_hand_landmarks", None) or []
     if not listas:
         return slots
+    lados = getattr(resultado, "lados", None)
+    if lados is not None and len(lados) == len(listas) and None not in lados:
+        for indice, lado in enumerate(lados):
+            if slots.get(lado) is None:
+                slots[lado] = indice
+        return slots
     lateralidades = getattr(resultado, "multi_handedness", None) or []
 
-    maos = [
-        (_rotulo_da_mao(lateralidades, i), _pontos_da_mao(lm))
-        for i, lm in enumerate(listas)
-    ]
-
-    if len(maos) == 1:
-        rotulo, pontos = maos[0]
-        slots[slot_do_rotulo(rotulo) if rotulo else "dir"] = pontos
+    if len(listas) == 1:
+        rotulo = _rotulo_da_mao(lateralidades, 0)
+        slots[slot_do_rotulo(rotulo) if rotulo else "dir"] = 0
         return slots
 
-    duas = sorted(maos[:2], key=lambda item: item[1][0, 0])
+    duas = sorted(range(2), key=lambda i: listas[i].landmark[0].x)
     lado_da_esquerda_da_imagem = slot_do_rotulo("Left")
     lado_da_direita_da_imagem = "esq" if lado_da_esquerda_da_imagem == "dir" else "dir"
-    slots[lado_da_esquerda_da_imagem] = duas[0][1]
-    slots[lado_da_direita_da_imagem] = duas[1][1]
+    slots[lado_da_esquerda_da_imagem] = duas[0]
+    slots[lado_da_direita_da_imagem] = duas[1]
     return slots
+
+
+def separar_maos(resultado: Any) -> dict[str, np.ndarray | None]:
+    """Distribui as mãos detectadas nos "slots" esquerda e direita.
+
+    Returns:
+        Para cada slot, os pontos da mão na imagem, matriz (21, 3), ou ``None``.
+    """
+    listas = getattr(resultado, "multi_hand_landmarks", None) or []
+    return {
+        lado: None if indice is None else _pontos_da_mao(listas[indice])
+        for lado, indice in indices_dos_slots(resultado).items()
+    }
+
+
+def separar_maos_mundo(resultado: Any) -> dict[str, np.ndarray | None]:
+    """Como :func:`separar_maos`, mas com os *world landmarks* de cada mão.
+
+    Os *world landmarks* são os mesmos 21 pontos em 3D, em metros, centrados
+    na própria mão. A profundidade deles é bem melhor que o ``z`` da imagem.
+
+    Returns:
+        Para cada slot, matriz (21, 3), ou ``None`` se não houver a mão ou o
+        resultado não trouxer os *world landmarks* dela.
+    """
+    mundo = getattr(resultado, "multi_hand_world_landmarks", None) or []
+    saida: dict[str, np.ndarray | None] = {}
+    for lado, indice in indices_dos_slots(resultado).items():
+        landmarks = (
+            mundo[indice] if indice is not None and indice < len(mundo) else None
+        )
+        valido = len(getattr(landmarks, "landmark", [])) >= TOTAL_LANDMARKS_MAO
+        saida[lado] = _pontos_da_mao(landmarks) if valido else None
+    return saida
 
 
 def montar_vetor_duas_maos(resultado: Any) -> np.ndarray:
@@ -188,12 +225,12 @@ def montar_vetor_duas_maos(resultado: Any) -> np.ndarray:
         Array de 126 ``float64``. Mãos ausentes ou degeneradas viram zeros.
     """
     vetor = np.zeros(TOTAL_FEATURES, dtype=np.float64)
-    slots = _separar_maos(resultado)
+    slots = separar_maos(resultado)
     for lado, intervalo in (("esq", IDX_ESQ), ("dir", IDX_DIR)):
         pontos = slots[lado]
         if pontos is None:
             continue
-        normalizados = _normalizar_mao(pontos)
+        normalizados = normalizar_mao(pontos)
         if normalizados is not None:
             vetor[intervalo] = normalizados.reshape(-1)
     return vetor
@@ -250,28 +287,3 @@ def espelhar_features(vetor: Any) -> np.ndarray:
     saida[..., IDX_ESQ] = _espelhar_varias(direita).reshape(v[..., IDX_ESQ].shape)
     saida[..., IDX_DIR] = _espelhar_varias(esquerda).reshape(v[..., IDX_DIR].shape)
     return saida
-
-
-def linhas_para_gravar(vetor: Any) -> list[np.ndarray]:
-    """Devolve as linhas que devem ser gravadas para um quadro.
-
-    Sinais de uma mão só ganham uma segunda linha, espelhada na mão oposta.
-    Assim o sinal gravado com a mão direita também é reconhecido com a esquerda.
-
-    Args:
-        vetor: Vetor de 126 valores de um quadro.
-
-    Returns:
-        Lista com 1 linha (duas mãos, ou nenhuma) ou 2 linhas (uma mão: a
-        original e a espelhada).
-    """
-    esquerda, direita = dividir_maos(vetor)
-    original = np.concatenate([esquerda, direita])
-    tem_esq, tem_dir = not eh_vetor_zerado(esquerda), not eh_vetor_zerado(direita)
-    zeros = np.zeros(FEATURES_POR_MAO)
-
-    if tem_esq and not tem_dir:
-        return [original, np.concatenate([zeros, espelhar_mao(esquerda)])]
-    if tem_dir and not tem_esq:
-        return [original, np.concatenate([espelhar_mao(direita), zeros])]
-    return [original]

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="500" viewBox="0 0 850 500">
+<rect x="0" y="0" width="850" height="500" fill="#F0F0F0"/>
+<g id="Frame">
+<rect x="8" y="8" width="834" height="484" fill="#F0F0F0"/>
+<g id="Scrollbar">
+<rect x="825" y="8" width="17" height="484" fill="#E6E6E6"/>
+<rect x="828" y="26" width="11" height="161" fill="#C1C1C1"/>
+</g>
+<g id="ScrolledText">
+<rect x="8" y="8" width="817" height="484" fill="#FFFFFF"/>
+<text x="10.0" y="23.0" fill="#222222" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:24:55 [APP] Pasta de dados: armazenamento</text>
+<text x="10.0" y="39.0" fill="#00796B" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:24:56 [VISION] MediaPipe Hands inicializado.</text>
+<text x="10.0" y="55.0" fill="#00796B" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:24:56 [VISION] FaceMesh inicializado: 468 pontos na malha.</text>
+<text x="10.0" y="71.0" fill="#1769AA" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:24:57 [CAMERA] Câmera conectada: câmera 0 via DirectShow (640x480)</text>
+<text x="10.0" y="87.0" fill="#222222" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:24:58 [APP] Interface iniciada.</text>
+<text x="10.0" y="103.0" fill="#2E7D32" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:25:02 [DATA] 42 exemplos de “olá” carregados.</text>
+<text x="10.0" y="119.0" fill="#7B1FA2" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:25:03 [MODEL] Modelo carregado: 4 sinais.</text>
+<text x="10.0" y="135.0" fill="#B36B00" font-family="Arial" font-size="13.3" text-anchor="start" xml:space="preserve">18:25:09 [WARNING] Mão saiu do quadro durante o ensino.</text>
+</g>
+</g>
+</svg>

@@ -1,102 +1,75 @@
 """Atualização de arquivos de versões anteriores do projeto.
 
-* O CSV antigo não tem a coluna ``rodada``. Ela é inferida e o CSV original é
-  guardado em um backup (nada é perdido).
 * O CSV e o modelo antigos ficavam na pasta do projeto (ou em ``src/``); agora
   ficam em ``armazenamento/``. Eles são COPIADOS, nunca movidos.
+* CSVs de formatos antigos (só a forma das mãos, sem rosto nem sequência de
+  quadros) não servem para a IA atual e não podem ser convertidos: faltam os
+  dados do rosto e os quadros que foram pulados. Eles são guardados em um
+  backup, junto com o modelo antigo, e o programa começa um CSV novo. Nada é
+  apagado.
 """
 
 from __future__ import annotations
 
+import csv
 import logging
 import os
 import shutil
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 from kara_sygna import config
-from kara_sygna.dados.repositorio import COLUNA_RODADA, COLUNA_ROTULO, cabecalho
-from kara_sygna.visao.caracteristicas import nomes_features
+from kara_sygna.dados.repositorio import cabecalho
 
 logger = logging.getLogger(__name__)
 
 
-def inferir_rodadas(
-    rotulos: np.ndarray, blocos_por_sinal: int = config.RODADAS_MINIMAS_INFERIDAS
-) -> np.ndarray:
-    """Cria uma coluna de rodadas para um CSV que não tinha.
-
-    Cada sinal tem suas linhas (em ordem de gravação) divididas em blocos
-    contíguos; cada bloco vira uma "rodada". Não é tão bom quanto rodadas reais
-    (os blocos vizinhos são parecidos), mas impede que quadros quase idênticos
-    caiam no treino e no teste ao mesmo tempo.
-
-    Args:
-        rotulos: Rótulo de cada linha, na ordem do arquivo.
-        blocos_por_sinal: Em quantos blocos dividir cada sinal.
-
-    Returns:
-        Vetor de inteiros (mesmo tamanho) com o id da rodada de cada linha.
-        Ids de sinais diferentes nunca se repetem.
-    """
-    rotulos = np.asarray(rotulos, dtype=str)
-    rodadas = np.zeros(len(rotulos), dtype=np.int64)
-    proximo_id = 1
-    for rotulo in dict.fromkeys(rotulos.tolist()):
-        posicoes = np.flatnonzero(rotulos == rotulo)
-        blocos = max(1, min(blocos_por_sinal, len(posicoes) // 2))
-        for numero, parte in enumerate(np.array_split(posicoes, blocos)):
-            rodadas[parte] = proximo_id + numero
-        proximo_id += blocos
-    return rodadas
-
-
-def _nome_do_backup(caminho: Path) -> Path:
-    """Gera ``dados_sinais_backup_AAAAmmdd_HHMMSS.csv`` ao lado do original."""
+def _nome_do_backup(caminho: Path, momento: datetime) -> Path:
+    """Gera ``nome_formato_antigo_AAAAmmdd_HHMMSS.ext`` ao lado do original."""
     return caminho.with_name(
-        f"{caminho.stem}_backup_{datetime.now():%Y%m%d_%H%M%S}{caminho.suffix}"
+        f"{caminho.stem}_formato_antigo_{momento:%Y%m%d_%H%M%S}{caminho.suffix}"
     )
 
 
-def migrar_csv_legado(caminho: Path) -> Path | None:
-    """Acrescenta a coluna ``rodada`` a um CSV antigo.
+def _ler_cabecalho(caminho: Path) -> list[str]:
+    with open(caminho, newline="", encoding="utf-8") as arquivo:
+        return next(csv.reader(arquivo), [])
+
+
+def guardar_formato_antigo(
+    caminho_csv: Path = config.ARQUIVO_CSV,
+    caminho_modelo: Path = config.ARQUIVO_MODELO,
+) -> Path | None:
+    """Move um CSV de formato antigo (e o modelo treinado com ele) para backups.
 
     Args:
-        caminho: CSV a verificar.
+        caminho_csv: CSV a verificar.
+        caminho_modelo: Modelo ``.pkl``; o resumo ``.json`` e a IA de
+            pré-sinais (``*_pre.pkl``) ao lado também vão.
 
     Returns:
-        Caminho do backup criado, ou ``None`` se nada precisou mudar (arquivo
-        ausente, vazio ou já no formato novo).
-
-    Raises:
-        ValueError: Se o CSV tiver colunas diferentes das esperadas.
+        Caminho do backup do CSV, ou ``None`` se nada precisou mudar (arquivo
+        ausente, vazio ou já no formato atual).
     """
-    caminho = Path(caminho)
-    if not caminho.exists() or caminho.stat().st_size == 0:
+    caminho_csv, caminho_modelo = Path(caminho_csv), Path(caminho_modelo)
+    if not caminho_csv.exists() or caminho_csv.stat().st_size == 0:
+        return None
+    if _ler_cabecalho(caminho_csv) == cabecalho():
         return None
 
-    tabela = pd.read_csv(caminho, dtype={COLUNA_ROTULO: str})
-    if list(tabela.columns) == cabecalho():
-        return None
-    if list(tabela.columns) != [COLUNA_ROTULO] + nomes_features():
-        raise ValueError(
-            f"O CSV {caminho.name} tem colunas desconhecidas e não pôde ser convertido. "
-            "Renomeie ou apague o arquivo para recomeçar."
-        )
+    momento = datetime.now()
+    backup = _nome_do_backup(caminho_csv, momento)
+    os.replace(caminho_csv, backup)
+    pre = caminho_modelo.with_name(f"{caminho_modelo.stem}_pre{caminho_modelo.suffix}")
+    for arquivo in (caminho_modelo, caminho_modelo.with_suffix(".json"), pre):
+        if arquivo.exists():
+            os.replace(arquivo, _nome_do_backup(arquivo, momento))
 
-    backup = _nome_do_backup(caminho)
-    shutil.copy2(caminho, backup)
-    tabela = tabela.copy()  # desfragmenta antes de inserir a coluna
-    tabela.insert(1, COLUNA_RODADA, inferir_rodadas(tabela[COLUNA_ROTULO].to_numpy()))
-    stat = caminho.stat()
-    tabela.to_csv(caminho, index=False, encoding="utf-8")
-    # Mantém a data original: o modelo continua valendo (os dados não mudaram).
-    os.utime(caminho, (stat.st_atime, stat.st_mtime))
-    logger.info(
-        "CSV convertido para o formato novo (coluna 'rodada'). Backup: %s", backup.name
+    logger.warning(
+        "Os sinais gravados estavam num formato antigo, que a IA atual não usa "
+        "(agora ela também olha o rosto e o movimento). Eles foram guardados em "
+        "%s, junto com o modelo antigo. Grave os sinais de novo e treine a IA.",
+        backup.name,
     )
     return backup
 
@@ -132,14 +105,19 @@ def copiar_arquivos_legados(
 def migrar_arquivos_legados(
     raiz: Path = config.RAIZ_PROJETO,
     destino: Path = config.PASTA_ARMAZENAMENTO,
-) -> None:
-    """Faz toda a migração: copia os arquivos antigos e converte o CSV.
+) -> Path | None:
+    """Faz toda a migração: copia os arquivos antigos e guarda formatos antigos.
 
-    Chamada uma vez na inicialização do programa. Se a conversão falhar, o
-    erro é registrado no log e o programa continua (o CSV não é alterado).
+    Chamada uma vez na inicialização do programa.
+
+    Returns:
+        Caminho do backup do CSV, se um CSV de formato antigo foi guardado.
     """
     copiar_arquivos_legados(raiz, destino)
     try:
-        migrar_csv_legado(destino / config.ARQUIVO_CSV.name)
-    except ValueError as erro:
-        logger.warning("%s", erro)
+        return guardar_formato_antigo(
+            destino / config.ARQUIVO_CSV.name, destino / config.ARQUIVO_MODELO.name
+        )
+    except OSError as erro:
+        logger.warning("Não foi possível guardar o CSV antigo: %s", erro)
+        return None

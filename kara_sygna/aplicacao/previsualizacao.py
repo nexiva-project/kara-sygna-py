@@ -6,22 +6,19 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from kara_sygna.visao.caracteristicas import (
-    FEATURES_POR_MAO,
-    eh_vetor_zerado,
-    quantidade_de_maos,
-)
+from kara_sygna.visao.caracteristicas import espelhar_features, quantidade_de_maos
 
 PASSO_GIRO_RADIANOS = 0.009
 
 
-def combinar_espelhos(vetores: Sequence[Sequence[float]]) -> list[np.ndarray]:
-    """Junta cada exemplo de uma mão com o seu espelho gravado logo depois.
+def completar_com_espelho(vetores: Sequence[Sequence[float]]) -> list[np.ndarray]:
+    """Mostra cada exemplo de uma mão também espelhado na mão oposta.
 
-    Sinais de uma mão são gravados duas vezes (original e espelhada na mão
-    oposta). Na pré-visualização, as duas linhas viram um único quadro com as
-    duas mãos, para mostrar o sinal como será reconhecido com qualquer mão.
-    Quadros com duas mãos, ou sem par, passam sem alteração.
+    No treino, cada gravação também entra espelhada (veja
+    :func:`kara_sygna.ia.sequencia.montar_amostras`). Na pré-visualização, um
+    quadro de uma mão ganha a outra mão espelhada, para mostrar o sinal como
+    será reconhecido com qualquer mão. Quadros com duas mãos (ou nenhuma)
+    passam sem alteração.
 
     Args:
         vetores: Exemplos de 126 valores, na ordem de gravação.
@@ -29,31 +26,13 @@ def combinar_espelhos(vetores: Sequence[Sequence[float]]) -> list[np.ndarray]:
     Returns:
         Lista de vetores de 126 valores.
     """
-    linhas = [np.asarray(v, dtype=np.float64) for v in vetores]
     resultado: list[np.ndarray] = []
-    i = 0
-    while i < len(linhas):
-        atual = linhas[i]
-        proximo = linhas[i + 1] if i + 1 < len(linhas) else None
-        if (
-            proximo is not None
-            and quantidade_de_maos(atual) == 1
-            and quantidade_de_maos(proximo) == 1
-        ):
-            atual_tem_esq = not eh_vetor_zerado(atual[:FEATURES_POR_MAO])
-            proximo_tem_esq = not eh_vetor_zerado(proximo[:FEATURES_POR_MAO])
-            if atual_tem_esq != proximo_tem_esq:
-                esquerda = atual if atual_tem_esq else proximo
-                direita = proximo if atual_tem_esq else atual
-                resultado.append(
-                    np.concatenate(
-                        [esquerda[:FEATURES_POR_MAO], direita[FEATURES_POR_MAO:]]
-                    )
-                )
-                i += 2
-                continue
+    for vetor in vetores:
+        atual = np.asarray(vetor, dtype=np.float64)
+        if quantidade_de_maos(atual) == 1:
+            # As mãos ficam em lados diferentes: somar junta as duas.
+            atual = atual + espelhar_features(atual)
         resultado.append(atual)
-        i += 1
     return resultado
 
 

@@ -6,7 +6,8 @@ mesmo quadro.
 
 Variações geradas: rotação 3D global, pequena rotação extra em cada mão,
 proporção da mão (dedos mais longos/curtos, mãos de outras pessoas) e ruído.
-(O espelhamento de sinais de uma mão já é gravado no CSV.)
+(O espelhamento das gravações é feito ao montar as janelas, em
+:func:`kara_sygna.ia.sequencia.montar_amostras`.)
 """
 
 from __future__ import annotations

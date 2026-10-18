@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="129" height="299" viewBox="0 0 129 299">
+<rect x="0" y="0" width="129" height="299" fill="#0D1525" stroke="#243651" stroke-width="1"/>
+<g id="Item - Ajustar à área">
+<rect x="2" y="2" width="125" height="26" fill="#00BFD9"/>
+<text x="24" y="20.0" fill="#07111E" font-family="Arial" font-size="13.3" xml:space="preserve">Ajustar à área</text>
+</g>
+<rect x="6" y="32" width="117" height="1" fill="#30415C"/>
+<g id="Item - 640×480">
+<text x="24" y="55.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">640×480</text>
+</g>
+<g id="Item - 720×480">
+<text x="24" y="81.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">720×480</text>
+</g>
+<g id="Item - 800×600">
+<text x="24" y="107.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">800×600</text>
+</g>
+<g id="Item - 1024×768">
+<text x="24" y="133.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1024×768</text>
+</g>
+<g id="Item - 1280×720">
+<text x="24" y="159.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1280×720</text>
+</g>
+<g id="Item - 1366×768">
+<text x="24" y="185.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1366×768</text>
+</g>
+<g id="Item - 1440×900">
+<text x="24" y="211.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1440×900</text>
+</g>
+<g id="Item - 1600×900">
+<text x="24" y="237.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1600×900</text>
+</g>
+<g id="Item - 1680×1050">
+<text x="24" y="263.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1680×1050</text>
+</g>
+<g id="Item - 1920×1080">
+<text x="24" y="289.0" fill="#EAF2FF" font-family="Arial" font-size="13.3" xml:space="preserve">1920×1080</text>
+</g>
+</svg>

@@ -1,0 +1,204 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect x="0" y="0" width="1440" height="900" fill="#080D18"/>
+<g id="Frame">
+<rect x="0" y="0" width="1440" height="900" fill="#080D18"/>
+<g id="Frame">
+<rect x="0" y="0" width="1440" height="76" fill="#0D1525"/>
+<g id="Frame">
+<rect x="24" y="10" width="208" height="56" fill="#0D1525"/>
+<g id="Label - ◈">
+<rect x="24" y="13" width="25" height="49" fill="#0D1525"/>
+<text x="36.5" y="50.0" fill="#00D7FF" font-family="Arial" font-size="36.0" font-weight="bold" text-anchor="middle" xml:space="preserve">◈</text>
+</g>
+<g id="Frame">
+<rect x="61" y="10" width="171" height="56" fill="#0D1525"/>
+<g id="Label - KARA SYGNA">
+<rect x="61" y="10" width="171" height="36" fill="#0D1525"/>
+<text x="146.5" y="37.0" fill="#F1F7FF" font-family="Arial" font-size="25.3" font-weight="bold" text-anchor="middle" xml:space="preserve">KARA SYGNA</text>
+</g>
+<g id="Label - RECONHECIMENTO DE SINAIS">
+<rect x="61" y="48" width="158" height="18" fill="#0D1525"/>
+<text x="140.0" y="61.0" fill="#7D93B5" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">RECONHECIMENTO DE SINAIS</text>
+</g>
+</g>
+</g>
+<g id="Label - ●  SISTEMA INICIALIZADO">
+<rect x="1268" y="27" width="148" height="21" fill="#0D1525"/>
+<text x="1342.0" y="42.0" fill="#5CE1A5" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">●  SISTEMA INICIALIZADO</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="0" y="76" width="1440" height="2" fill="#00D7FF"/>
+</g>
+<g id="Frame">
+<rect x="18" y="94" width="1404" height="762" fill="#080D18"/>
+<g id="Frame">
+<rect x="18" y="94" width="1404" height="514" fill="#080D18"/>
+<g id="Frame">
+<rect x="18.5" y="94.5" width="1009" height="513" fill="#111B2D" stroke="#243651" stroke-width="1"/>
+<g id="Frame">
+<rect x="35" y="109" width="976" height="24" fill="#111B2D"/>
+<g id="Label - VISÃO AO VIVO">
+<rect x="35" y="109" width="113" height="24" fill="#111B2D"/>
+<text x="91.5" y="126.0" fill="#F1F7FF" font-family="Arial" font-size="14.7" font-weight="bold" text-anchor="middle" xml:space="preserve">VISÃO AO VIVO</text>
+</g>
+<g id="Label - ● CÂMERA">
+<rect x="946" y="110" width="65" height="21" fill="#111B2D"/>
+<text x="978.5" y="125.0" fill="#5CE1A5" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">● CÂMERA</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="19" y="143" width="1008" height="1" fill="#243651"/>
+</g>
+<g id="Frame">
+<rect x="31" y="156" width="984" height="359" fill="#050912"/>
+<g id="Frame">
+<rect x="33" y="158" width="980" height="355" fill="#050912"/>
+<g id="Label - IMAGEM DA CÂMERA">
+<rect x="418" y="322" width="211" height="29" fill="#050912"/>
+<text x="523.5" y="344.0" fill="#30415C" font-family="Arial" font-size="20.0" text-anchor="middle" xml:space="preserve">IMAGEM DA CÂMERA</text>
+</g>
+</g>
+</g>
+<g id="Frame">
+<rect x="35" y="527" width="976" height="20" fill="#111B2D"/>
+<g id="Label - ● MÃO ESQUERDA">
+<rect x="35" y="527" width="101" height="20" fill="#111B2D"/>
+<text x="85.5" y="541.0" fill="#00D7FF" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">● MÃO ESQUERDA</text>
+</g>
+<g id="Label - ● MÃO DIREITA">
+<rect x="154" y="527" width="85" height="20" fill="#111B2D"/>
+<text x="196.5" y="541.0" fill="#FF9F43" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">● MÃO DIREITA</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="31" y="559" width="984" height="36" fill="#111B2D"/>
+<g id="Label - IMAGEM DA CÂMERA">
+<rect x="33" y="567" width="119" height="20" fill="#111B2D"/>
+<text x="92.5" y="581.0" fill="#7186A8" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">IMAGEM DA CÂMERA</text>
+</g>
+<g id="Frame">
+<rect x="164.5" y="559.5" width="166" height="35" fill="#00BFD9" stroke="#00D7FF" stroke-width="1"/>
+<g id="Button - AJUSTAR À ÁREA">
+<rect x="165.5" y="560.5" width="127" height="33" fill="#13243A" stroke="#F0F0F0" stroke-width="1"/>
+<text x="229.0" y="581.5" fill="#EAF2FF" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">AJUSTAR À ÁREA</text>
+</g>
+<g id="Button - ▼">
+<rect x="293.5" y="560.5" width="36" height="33" fill="#00BFD9" stroke="#F0F0F0" stroke-width="1"/>
+<text x="311.5" y="581.5" fill="#07111E" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">▼</text>
+</g>
+</g>
+</g>
+</g>
+<g id="Frame">
+<rect x="1042.5" y="94.5" width="379" height="513" fill="#0D1525" stroke="#243651" stroke-width="1"/>
+<g id="Label - PAINEL DE CONTROLE">
+<rect x="1059" y="111" width="187" height="25" fill="#0D1525"/>
+<text x="1152.5" y="129.0" fill="#F1F7FF" font-family="Arial" font-size="16.0" font-weight="bold" text-anchor="middle" xml:space="preserve">PAINEL DE CONTROLE</text>
+</g>
+<g id="Frame">
+<rect x="1055.5" y="148.5" width="353" height="88" fill="#13243A" stroke="#00AFCB" stroke-width="1"/>
+<g id="Label - SINAL RECONHECIDO">
+<rect x="1068" y="161" width="116" height="20" fill="#13243A"/>
+<text x="1126.0" y="175.0" fill="#7D93B5" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">SINAL RECONHECIDO</text>
+</g>
+<g id="Label - OLÁ">
+<rect x="1068" y="186" width="328" height="36" fill="#13243A"/>
+<text x="1071.0" y="213.0" fill="#00D7FF" font-family="Arial" font-size="25.3" font-weight="bold" text-anchor="start" xml:space="preserve">OLÁ</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="1055" y="249" width="354" height="258" fill="#111B2D"/>
+<g id="Label - 01  /  MODO ENSINAR">
+<rect x="1067" y="261" width="141" height="22" fill="#111B2D"/>
+<text x="1137.5" y="277.0" fill="#F1F7FF" font-family="Arial" font-size="13.3" font-weight="bold" text-anchor="middle" xml:space="preserve">01  /  MODO ENSINAR</text>
+</g>
+<g id="Label - Nome do sinal">
+<rect x="1067" y="291" width="87" height="21" fill="#111B2D"/>
+<text x="1110.5" y="306.0" fill="#8DA5C7" font-family="Arial" font-size="12.0" text-anchor="middle" xml:space="preserve">Nome do sinal</text>
+</g>
+<g id="Entry">
+<rect x="1067.5" y="317.5" width="329" height="36" fill="#080D18" stroke="#30415C" stroke-width="1"/>
+<text x="1073.0" y="341.0" fill="#F1F7FF" font-family="Arial" font-size="14.7" text-anchor="start" xml:space="preserve">obrigado</text>
+</g>
+<g id="Button - COMEÇAR A ENSINAR">
+<rect x="1067.5" y="364.5" width="329" height="37" fill="#00BFD9" stroke="#F0F0F0" stroke-width="1"/>
+<text x="1232.0" y="387.5" fill="#07111E" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">COMEÇAR A ENSINAR</text>
+</g>
+<g id="Button - PARAR ENSINO / RECONHECIMENTO">
+<rect x="1067.5" y="409.5" width="329" height="37" fill="#1B2940" stroke="#F0F0F0" stroke-width="1"/>
+<text x="1232.0" y="432.5" fill="#DCE8FA" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">PARAR ENSINO / RECONHECIMENTO</text>
+</g>
+<g id="Button - TREINAR IA">
+<rect x="1067.5" y="457.5" width="329" height="37" fill="#00BFD9" stroke="#F0F0F0" stroke-width="1"/>
+<text x="1232.0" y="480.5" fill="#07111E" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">TREINAR IA</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="1055" y="517" width="354" height="80" fill="#111B2D"/>
+<g id="Label - 02  /  MODO SINAL">
+<rect x="1067" y="529" width="123" height="22" fill="#111B2D"/>
+<text x="1128.5" y="545.0" fill="#F1F7FF" font-family="Arial" font-size="13.3" font-weight="bold" text-anchor="middle" xml:space="preserve">02  /  MODO SINAL</text>
+</g>
+<g id="Button - INICIAR RECONHECIMENTO">
+<rect x="1067.5" y="559.5" width="329" height="30" fill="#00BFD9" stroke="#F0F0F0" stroke-width="1"/>
+<text x="1232.0" y="579.0" fill="#07111E" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">INICIAR RECONHECIMENTO</text>
+</g>
+</g>
+</g>
+</g>
+<g id="Frame">
+<rect x="18.5" y="622.5" width="1403" height="233" fill="#111B2D" stroke="#243651" stroke-width="1"/>
+<g id="Frame">
+<rect x="33" y="635" width="1374" height="24" fill="#111B2D"/>
+<g id="Label - TEXTO DOS SINAIS">
+<rect x="33" y="635" width="147" height="24" fill="#111B2D"/>
+<text x="106.5" y="652.0" fill="#F1F7FF" font-family="Arial" font-size="14.7" font-weight="bold" text-anchor="middle" xml:space="preserve">TEXTO DOS SINAIS</text>
+</g>
+<g id="Label - O texto reconhecido aparece aqui">
+<rect x="192" y="636" width="189" height="21" fill="#111B2D"/>
+<text x="286.5" y="651.0" fill="#7186A8" font-family="Arial" font-size="12.0" text-anchor="middle" xml:space="preserve">O texto reconhecido aparece aqui</text>
+</g>
+</g>
+<g id="Frame">
+<rect x="31" y="667" width="1378" height="128" fill="#F0F0F0"/>
+<g id="Scrollbar">
+<rect x="1392" y="667" width="17" height="128" fill="#E6E6E6"/>
+<rect x="1395" y="685" width="11" height="42" fill="#C1C1C1"/>
+</g>
+<g id="ScrolledText">
+<rect x="31" y="667" width="1361" height="128" fill="#080D18"/>
+<text x="43.0" y="698.0" fill="#FFFFFF" font-family="Arial" font-size="24.0" text-anchor="start" xml:space="preserve">olá tudo bem obrigado </text>
+</g>
+</g>
+<g id="Frame">
+<rect x="31" y="805" width="1378" height="38" fill="#111B2D"/>
+<g id="Button - LIMPAR TEXTO">
+<rect x="1317.5" y="805.5" width="91" height="37" fill="#1B2940" stroke="#F0F0F0" stroke-width="1"/>
+<text x="1363.0" y="828.5" fill="#DCE8FA" font-family="Arial" font-size="12.0" font-weight="bold" text-anchor="middle" xml:space="preserve">LIMPAR TEXTO</text>
+</g>
+</g>
+</g>
+</g>
+<g id="Frame">
+<rect x="0" y="872" width="1440" height="28" fill="#0D1525"/>
+<g id="Label - KARA SYGNA  •  ACESSIBILIDADE EM LIBRAS">
+<rect x="18" y="877" width="232" height="18" fill="#0D1525"/>
+<text x="134.0" y="890.0" fill="#7186A8" font-family="Arial" font-size="10.7" text-anchor="middle" xml:space="preserve">KARA SYGNA  •  ACESSIBILIDADE EM LIBRAS</text>
+</g>
+<g id="Sizegrip">
+<rect x="1424" y="884" width="16" height="16" fill="#0D1525"/>
+<rect x="1434" y="898" width="2" height="2" fill="#7186A8"/>
+<rect x="1438" y="894" width="2" height="2" fill="#7186A8"/>
+<rect x="1438" y="898" width="2" height="2" fill="#7186A8"/>
+<rect x="1430" y="898" width="2" height="2" fill="#7186A8"/>
+<rect x="1434" y="894" width="2" height="2" fill="#7186A8"/>
+<rect x="1438" y="890" width="2" height="2" fill="#7186A8"/>
+</g>
+<g id="Label - PROCESSAMENTO LOCAL">
+<rect x="1263" y="877" width="143" height="18" fill="#0D1525"/>
+<text x="1334.5" y="890.0" fill="#00D7FF" font-family="Arial" font-size="10.7" font-weight="bold" text-anchor="middle" xml:space="preserve">PROCESSAMENTO LOCAL</text>
+</g>
+</g>
+</g>
+</svg>

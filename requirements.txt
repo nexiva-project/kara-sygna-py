@@ -4,6 +4,8 @@
 opencv-contrib-python==4.10.0.84
 mediapipe==0.10.21
 scikit-learn==1.5.2
+# Usado direto no preenchimento das mãos (antes vinha só junto do scikit-learn).
+scipy==1.17.1
 joblib==1.4.2
 pandas==2.2.3
 pillow==10.4.0
